@@ -1,0 +1,1 @@
+BFS uses a queue. Dijkstra does not work with negative edge weights.

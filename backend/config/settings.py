@@ -31,6 +31,11 @@ DEBUG = os.getenv("DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",")
 
+NOTE_UPLOAD_MAX_SIZE = int(os.getenv("NOTE_UPLOAD_MAX_SIZE", 10 * 1024 * 1024))  # Default to 10 MB
+
+NOTE_UPLOAD_ALLOWED_CONTENT_TYPES = os.getenv(
+    "NOTE_UPLOAD_ALLOWED_CONTENT_TYPES", "application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png,text/plain,image/webp,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation",).split(",")
+
 
 # Application definition
 
@@ -46,6 +51,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'users',
     'notes',
+    'knowledge',
 ]
 
 MIDDLEWARE = [
