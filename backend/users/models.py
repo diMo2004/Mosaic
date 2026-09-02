@@ -30,6 +30,7 @@ class UserProfile(models.Model):
     google_picture_url = models.URLField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    can_view_own_notes = models.BooleanField(default=False)
 
     def missing_required_fields(self):
         fields = []
