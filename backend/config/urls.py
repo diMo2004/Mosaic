@@ -31,6 +31,7 @@ urlpatterns = [
     path('api/notes/', include('notes.urls')),
     path('api/knowledge/', include('knowledge.urls')),
     path('api/learning/', include('learning.urls')),
+    path("api/verification/", include("verification.urls")),
 ]
 
 if settings.DEBUG:

@@ -28,6 +28,8 @@ class NoteProcessingJob(models.Model):
         choices=STATUS_CHOICES,
         default=STATUS_UPLOADED,
     )
+    attempts = models.PositiveIntegerField(default=0)
+    max_attempts = models.PositiveIntegerField(default=3)
     error_message = models.TextField(blank=True)
     started_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)

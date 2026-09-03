@@ -1,4 +1,5 @@
 from django.shortcuts import render
+from django.shortcuts import get_object_or_404
 from django.db.models import Count,Sum
 from django.utils import timezone
 from rest_framework import generics, permissions, status
@@ -6,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import Flashcard, FlashcardFeedback, SavedFlashcard, UserProgress
 from .serializers import FlashcardSerializer, FlashcardFeedbackSerializer
+from knowledge.models import CanonicalClaim
 # Create your views here.
 
 class FlashcardFeedView(generics.ListAPIView):
@@ -110,3 +112,43 @@ class UserProgressSummaryView(APIView):
         }
 
         return Response(progress_summary, status=status.HTTP_200_OK)
+
+class GroundedExplanationView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, pk):
+        canonical_claim = get_object_or_404(
+            CanonicalClaim.objects.select_related('concept','source_claim'),
+            pk=pk,
+            is_active=True,
+        )
+
+        evidence_items = canonical_claim.source_claim.evidence_items.select_related('source').all()
+
+        return Response(
+            {
+                "canonical_claim": {
+                    "id": canonical_claim.id,
+                    "concept": canonical_claim.concept.name,
+                    "text": canonical_claim.text,
+                    "confidence": str(canonical_claim.confidence),
+                },
+                "explanation": (
+                    f"{canonical_claim.text}\n\n"
+                    "This explanation is grounded in the evidence listed below."
+                    "LLM-generated explanation will be added later."
+                ),
+                "evidence": [
+                    {
+                        "source": evidence.source.name,
+                        "title": evidence.title,
+                        "url": evidence.url,
+                        "excerpt": evidence.excerpt,
+                        "relation": evidence.relation,
+                        "relevance_score": str(evidence.relevance_score),
+                    }
+                    for evidence in evidence_items
+                ],
+            }
+        )
+    

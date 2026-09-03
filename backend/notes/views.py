@@ -12,12 +12,15 @@ class NoteUploadView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         uploaded_file = self.request.FILES.get('file')
-        serializer.save(
+        note =serializer.save(
             owner=self.request.user,
             original_filename=getattr(uploaded_file, 'name', ''),
             content_type=getattr(uploaded_file, 'content_type', ''),
             file_size=getattr(uploaded_file, 'size', 0)
         )
+
+        from verification.tasks import process_note_placeholder
+        process_note_placeholder(note.id)
 
 class NoteListView(generics.ListAPIView):
     serializer_class = NoteDetailSerializer

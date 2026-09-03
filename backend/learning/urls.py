@@ -6,6 +6,7 @@ from .views import (
     FlashcardFeedView,
     SaveFlashCardView,
     UserProgressSummaryView,
+    GroundedExplanationView,
 )
 
 urlpatterns = [
@@ -14,4 +15,5 @@ urlpatterns = [
     path("flashcards/<int:pk>/save/", SaveFlashCardView.as_view(), name="flashcard-save"),
     path("flashcards/<int:pk>/feedback/", FlashcardFeedbackView.as_view(), name="flashcard-feedback"),
     path("progress/", UserProgressSummaryView.as_view(), name="progress-summary"),
+    path("canonical-claims/<int:pk>/explain/", GroundedExplanationView.as_view(), name="grounded-explanation"),
 ]
