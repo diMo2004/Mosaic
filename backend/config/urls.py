@@ -30,6 +30,7 @@ urlpatterns = [
     path('api/auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/notes/', include('notes.urls')),
     path('api/knowledge/', include('knowledge.urls')),
+    path('api/learning/', include('learning.urls')),
 ]
 
 if settings.DEBUG:
