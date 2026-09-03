@@ -113,6 +113,142 @@ class Claim(models.Model):
     def __str__(self):
         return self.text[:80]
 
+class SourceDocument(models.Model):
+    DOCUMENT_TYPE_NOTE = "note"
+    DOCUMENT_TYPE_WEBPAGE = "web_page"
+    DOCUMENT_TYPE_PDF ="pdf"
+    DOCUMENT_TYPE_DOC = "doc"
+    DOCUMENT_TYPE_OTHER = "other"
+
+    DOCUMENT_TYPE_CHOICES = [
+        (DOCUMENT_TYPE_NOTE, "Note"),
+        (DOCUMENT_TYPE_WEBPAGE, "Web Page"),
+        (DOCUMENT_TYPE_PDF, "PDF"),
+        (DOCUMENT_TYPE_DOC, "DOC"),
+        (DOCUMENT_TYPE_OTHER, "Other"),
+    ]
+
+    source = models.ForeignKey(
+        Source,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='documents',
+    )
+    uploaded_note = models.ForeignKey(
+        "notes.Note",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='source_documents',
+    )
+    title = models.CharField(max_length=255)
+    document_type = models.CharField(
+        max_length=30,
+        choices=DOCUMENT_TYPE_CHOICES,
+        default=DOCUMENT_TYPE_OTHER,
+    )
+    url = models.URLField(blank=True)
+    raw_text = models.TextField(blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    retrieved_at = models.DateTimeField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.title
+
+
+class ExtractedClaim(models.Model):
+    STATUS_PENDING = 'pending'
+    STATUS_SUPPORTED = 'supported'
+    STATUS_CONTRADICTED = 'contradicted'
+    STATUS_PARTIALLY_SUPPORTED = 'partially_supported'
+    STATUS_UNCERTAIN = 'uncertain'
+
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending'),
+        (STATUS_SUPPORTED, 'Supported'),
+        (STATUS_CONTRADICTED, 'Contradicted'),
+        (STATUS_PARTIALLY_SUPPORTED, 'Partially Supported'),
+        (STATUS_UNCERTAIN, 'Uncertain'),
+    ]
+
+    source_document = models.ForeignKey(
+        SourceDocument,
+        on_delete=models.CASCADE,
+        related_name='extracted_claims',
+    )
+    text = models.TextField()
+    status = models.CharField(
+        max_length=40,
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING,
+    )
+    confidence = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        default=0.00,
+    )
+    reviewed_notes = models.TextField(blank=True)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reviewed_extracted_claims',
+    )
+    reviewed_at = models.DateTimeField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.text[:80]
+
+class Concept(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+    slug = models.SlugField(max_length=255, unique=True)    
+    description = models.TextField(blank=True)
+    prerequisites = models.ManyToManyField(
+        'self',
+        symmetrical=False,
+        related_name='dependent_concepts',
+        blank=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+class CanonicalClaim(models.Model):
+    concept = models.ForeignKey(
+        Concept,
+        on_delete=models.CASCADE,
+        related_name='canonical_claims',
+    )
+    text = models.TextField()
+    source_claim = models.ForeignKey(
+        ExtractedClaim,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='canonical_claims',
+    )
+    confidence = models.DecimalField(
+        max_digits=4,
+        decimal_places=2,
+        default=0.00,
+    )
+    is_active = models.BooleanField(default=True)
+    created_by_ai = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.text[:80]
+
 class Evidence(models.Model):
     SUPPORTS = "supports"
     CONTRADICTS = "contradicts"
@@ -125,7 +261,7 @@ class Evidence(models.Model):
     ]
 
     claim = models.ForeignKey(
-        Claim,
+        ExtractedClaim,
         on_delete=models.CASCADE,
         related_name='evidences_items',
     )

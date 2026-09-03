@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Claim, Evidence, Source
+from .models import Evidence, Source, CanonicalClaim, Concept, ExtractedClaim, SourceDocument
 # Register your models here.
 
 @admin.register(Source)
@@ -34,20 +34,21 @@ class EvidenceInline(admin.TabularInline):
         "relevance_score",
     ]
 
-@admin.register(Claim)
-class ClaimAdmin(admin.ModelAdmin):
+@admin.register(ExtractedClaim)
+class ExtractedClaimAdmin(admin.ModelAdmin):
     list_display = [
         "id",
         "short_text",
         "status",
         "confidence",
+        "source_document",
         "reviewed_by",
         "reviewed_at",
-        "created_from_note",
         "created_at",
     ]
-    list_filter = ["status", "confidence", "reviewed_by"]
+    list_filter = ["status", "reviewed_at", "created_at"]
     search_fields = ["text", "reviewer_notes"]
+    readonly_fields = ["created_at"]
     inlines = [EvidenceInline]
 
     def short_text(self, obj):
@@ -66,3 +67,44 @@ class EvidenceAdmin(admin.ModelAdmin):
     ]
     list_filter = ["relation", "source", "created_at"]
     search_fields = ["title", "excerpt", "url", "source_name", "claim_text"]
+
+@admin.register(SourceDocument)
+class SourceDocumentAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "title",
+        "document_type",
+        "source",
+        "uploaded_note",
+        "created_at",
+    ]
+    list_filter = ["document_type", "created_at"]
+    search_fields = ["title", "raw_text", "url"]
+
+@admin.register(Concept)
+class ConceptAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "name",
+        "slug",
+        "created_at",
+    ]
+    search_fields = ["name", "description"]
+
+@admin.register(CanonicalClaim)
+class CanonicalClaimAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "short_text",
+        "concept",
+        "confidence",
+        "is_active",
+        "created_by_ai",
+        "created_at",
+    ]
+
+    list_filter = ["is_active", "created_by_ai", "created_at"]
+    search_fields = ["text", "concept_name"]
+
+    def short_text(self, obj):
+        return obj.text[:80]

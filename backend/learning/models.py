@@ -19,7 +19,7 @@ class Flashcard(models.Model):
     answer = models.TextField()
     explanation = models.TextField(blank=True)
     source_claim = models.ForeignKey(
-        'knowledge.Claim',
+        'knowledge.CanonicalClaim',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,

@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'notes',
     'knowledge',
     'learning',
+    'verification',
 ]
 
 MIDDLEWARE = [
