@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Claim, Evidence, Source
+from .models import CanonicalClaim, Evidence, ExtractedClaim, Source, SourceDocument
 
 class SourceSerializer(serializers.ModelSerializer):
     class Meta:
@@ -31,25 +31,44 @@ class SourceSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
 
-class ClaimSerializer(serializers.ModelSerializer):
+class ExtractedClaimSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Claim
+        model = ExtractedClaim
         fields = [
             "id",
+            "source_document",
             "text",
             "status",
             "confidence",
-            "reviewer_notes",
+            "reviewed_notes",
             "reviewed_by",
             "reviewed_at",
-            "created_from_note",
             "created_at",
-            "updated_at",
         ]
         read_only_fields = [
             "id",
             "reviewed_by",
             "reviewed_at",
+            "created_at",
+        ]
+
+class CanonicalClaimSerializer(serializers.ModelSerializer):
+    concept_name = serializers.CharField(source='concept.name', read_only=True)
+    class Meta:
+        model = CanonicalClaim
+        fields = [
+            "id",
+            "concept",
+            "text",
+            "source_claim",
+            "concept_name",
+            "is_active",
+            "created_by_ai",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = [
+            "id",
             "created_at",
             "updated_at",
         ]
@@ -69,6 +88,24 @@ class EvidenceSerializer(serializers.ModelSerializer):
             "excerpt",
             "retrieved_at",
             "relevance_score",
+            "created_at",
+        ]
+        read_only_fields = [
+            "id",
+            "created_at",
+        ]
+
+class SourceDocumentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SourceDocument
+        fields = [
+            "id",
+            "title",
+            "document_type",
+            "source",
+            "uploaded_note",
+            "raw_text",
+            "url",
             "created_at",
         ]
         read_only_fields = [

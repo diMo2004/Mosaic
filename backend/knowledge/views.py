@@ -3,8 +3,14 @@ from django.shortcuts import render
 # Create your views here.
 from django.utils import timezone
 from rest_framework import permissions, viewsets
-from .models import Claim, Evidence, Source
-from .serializers import ClaimSerializer, EvidenceSerializer, SourceSerializer
+from .models import CanonicalClaim, Evidence, Source, ExtractedClaim, SourceDocument
+from .serializers import (
+    CanonicalClaimSerializer, 
+    EvidenceSerializer, 
+    SourceSerializer,
+    ExtractedClaimSerializer, 
+    SourceDocumentSerializer
+)
 
 class IsAdminOrReadOnly(permissions.BasePermission):
     def has_permission(self, request, view):
@@ -25,9 +31,12 @@ class EvidenceViewSet(viewsets.ModelViewSet):
     serializer_class = EvidenceSerializer
     permission_classes = [permissions.IsAdminUser]
 
-class ClaimReviewViewSet(viewsets.ModelViewSet):
-    queryset = Claim.objects.select_related("created_from_note","reviewed_by")
-    serializer_class = ClaimSerializer
+class ExtractedClaimReviewViewSet(viewsets.ModelViewSet):
+    queryset = ExtractedClaim.objects.select_related(
+        "source_document",
+        "reviewed_by",
+        )
+    serializer_class = ExtractedClaimSerializer
     permission_classes = [permissions.IsAdminUser]
 
     def perform_update(self, serializer):
@@ -35,4 +44,19 @@ class ClaimReviewViewSet(viewsets.ModelViewSet):
             reviewed_by=self.request.user, 
             reviewed_at=timezone.now()
             )
-        
+
+class CanonicalClaimViewSet(viewsets.ModelViewSet):
+    queryset = CanonicalClaim.objects.select_related(
+        "concept",
+        "source_claim",
+        )
+    serializer_class = CanonicalClaimSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+class SourceDocumentViewSet(viewsets.ModelViewSet):
+    queryset = SourceDocument.objects.select_related("source")
+    serializer_class = SourceDocumentSerializer
+    permission_classes = [IsAdminOrReadOnly]
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)

@@ -62,57 +62,6 @@ class Source(models.Model):
     def __str__(self):
         return self.name
 
-class Claim(models.Model):
-    STATUS_PENDING = 'pending'
-    STATUS_SUPPORTED = 'supported'
-    STATUS_CONTRADICTED = 'contradicted'
-    STATUS_PARTIALLY_SUPPORTED = 'partially_supported'
-    STATUS_UNCERTAIN = 'uncertain'
-
-    STATUS_CHOICES = [
-        (STATUS_PENDING, 'Pending'),
-        (STATUS_SUPPORTED, 'Supported'),
-        (STATUS_CONTRADICTED, 'Contradicted'),
-        (STATUS_PARTIALLY_SUPPORTED, 'Partially Supported'),
-        (STATUS_UNCERTAIN, 'Uncertain'),
-    ]
-
-    text = models.TextField()
-    status = models.CharField(
-        max_length=40,
-        choices=STATUS_CHOICES,
-        default=STATUS_PENDING,
-    )
-    confidence = models.DecimalField(
-        max_digits=4,
-        decimal_places=2,
-        default=0.00,
-    )
-    reviewer_notes = models.TextField(blank=True)
-    reviewed_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='reviewed_claims',
-    )
-    reviewed_at = models.DateTimeField(blank=True, null=True)
-    created_from_note = models.ForeignKey(
-        "notes.Note",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='claims',
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        ordering = ['-created_at']
-
-    def __str__(self):
-        return self.text[:80]
-
 class SourceDocument(models.Model):
     DOCUMENT_TYPE_NOTE = "note"
     DOCUMENT_TYPE_WEBPAGE = "web_page"
