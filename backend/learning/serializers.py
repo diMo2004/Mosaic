@@ -41,6 +41,12 @@ class FlashcardFeedbackSerializer(serializers.ModelSerializer):
             "created_at",
         ]
 
+    comment = serializers.CharField(
+        required=False, 
+        allow_blank=True,
+        max_length=1000,
+    )
+
 class UserProgressSerializer(serializers.ModelSerializer):
     flashcard_title = serializers.CharField(source='flashcard.title', read_only=True)
     class Meta:

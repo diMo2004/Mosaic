@@ -11,6 +11,7 @@ The immediate goal is:
 ```text
 Authenticated users can enter the app, upload notes, and consume basic flashcards.
 The backend has the data model foundation for source documents, extracted claims, evidence, canonical claims, and processing jobs.
+The backend has a basic test suite that protects auth, notes, permissions, and verification behavior.
 ```
 
 ## Current Backend Milestone
@@ -34,6 +35,7 @@ Email/password registration
 Email/password login
 JWT refresh
 UserProfile
+UserProfile auto-create signal
 Google sign-in
 Mandatory immediate profile completion
 ```
@@ -44,7 +46,7 @@ Do next:
 Confirm UserProfile fields
 Add Google auth endpoint if not complete
 Add profile completion endpoint
-Add tests for auth flows
+Keep auth tests passing against /api/auth/ routes
 ```
 
 ### Notes
@@ -57,6 +59,7 @@ File metadata
 Upload validation
 Owner tracking
 Premium/contributor-gated note list/detail
+Tests for upload and note-library permission behavior
 ```
 
 Do next:
@@ -74,20 +77,21 @@ Current/foundation work:
 
 ```text
 Source registry
+SourceDocument
+ExtractedClaim
 Evidence model/API
+Concept
+CanonicalClaim
 Admin review tools
 ```
 
 Do next:
 
 ```text
-Finalize SourceDocument
-Finalize ExtractedClaim
-Finalize Concept
-Finalize CanonicalClaim
-Point Evidence to ExtractedClaim
-Point Flashcard to CanonicalClaim
 Clean up old/duplicate Claim model usage
+Ensure Evidence points to ExtractedClaim
+Ensure reverse relation names are consistent
+Ensure Flashcard points to CanonicalClaim
 ```
 
 ### Verification
@@ -96,6 +100,9 @@ Current/foundation work:
 
 ```text
 verification app exists
+claim verification service started
+verification tests started
+prompt templates started
 processing model/service needs completion
 ```
 
@@ -107,6 +114,9 @@ Add placeholder processing task
 Create source document from uploaded note
 Create placeholder extracted claim
 Update job/note statuses during processing
+Finish evidence retrieval placeholder
+Improve confidence scoring with source authority and evidence relevance
+Ensure CanonicalClaim is created only for supported claims
 ```
 
 ### Learning
@@ -119,6 +129,7 @@ Save/unsave flashcard
 Feedback endpoint
 Basic progress summary
 Admin tools
+Flashcard generation from CanonicalClaim started/planned through verification service
 ```
 
 Do next:
@@ -128,6 +139,7 @@ Fix small typos/field mismatches as found
 Ensure save/detail/progress work using same user token
 Add "understood" or mastery action endpoint later
 Ensure flashcards link to CanonicalClaim
+Add grounded explanation endpoint using CanonicalClaim plus supporting Evidence
 ```
 
 ## Near-Term Sprint Plan
@@ -141,6 +153,7 @@ Auth works
 Notes upload works
 Flashcard feed/detail/save/feedback/progress works
 Source/evidence admin/API works
+Initial backend tests exist and pass
 Clean migrations
 No generated files in Git
 ```
@@ -151,6 +164,7 @@ Definition of done:
 All migrations run cleanly
 Admin opens without errors
 curl.exe tests pass
+python manage.py test passes
 Normal user cannot view gated note library
 Eligible user can view only their own notes
 ```
@@ -205,6 +219,8 @@ Evidence retrieval placeholder
 Manual/admin evidence attachment
 Verification status updates
 CanonicalClaim creation from supported/corrected extracted claims
+Flashcard generation from canonical claims
+Grounded explanation endpoint
 ```
 
 Definition of done:
@@ -213,6 +229,7 @@ Definition of done:
 ExtractedClaim can become supported/contradicted/uncertain.
 Supported/corrected knowledge can become CanonicalClaim.
 Flashcard can be linked to CanonicalClaim.
+Explanation endpoint returns canonical claim plus supporting evidence.
 ```
 
 ### Sprint 5: Mobile MVP Shell
@@ -350,4 +367,3 @@ advanced monitoring
 ```
 
 The MVP should remain a modular monolith.
-

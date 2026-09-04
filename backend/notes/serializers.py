@@ -18,6 +18,11 @@ class NoteUploadSerializer(serializers.ModelSerializer):
             "status",
             "uploaded_at",
         ]
+    def validate_title(self, value):
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError("Title cannot be empty.")
+        return value
 
     def validate_file(self, file):
         if file.size > settings.NOTE_UPLOAD_MAX_SIZE:

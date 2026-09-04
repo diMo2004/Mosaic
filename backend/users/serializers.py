@@ -1,3 +1,5 @@
+import profile
+
 from django.contrib.auth.models import User
 from rest_framework import serializers
 from .models import UserProfile
@@ -16,11 +18,17 @@ class RegisterSerializer(serializers.ModelSerializer):
             password=validated_data['password']
         )
 
-        UserProfile.objects.create(
+        profile, _ = UserProfile.objects.get_or_create(
             user=user,
-            auth_provider=UserProfile.AUTH_PROVIDER_DJANGO,
-            full_name=validated_data.get('username', ""),
+            defaults={
+                'auth_provider': UserProfile.AUTH_PROVIDER_DJANGO,
+                'full_name': validated_data.get("username", ""),
+            },
         )
+        if not profile.full_name:
+            profile.full_name = validated_data.get("username", "")
+        profile.auth_provider = UserProfile.AUTH_PROVIDER_DJANGO
+        profile.update_completion_status()
         return user
 
 class GoogleAuthSerializer(serializers.Serializer):

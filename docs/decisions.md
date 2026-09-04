@@ -124,6 +124,18 @@ If Google does not provide all MOSAIC-required profile details, the missing fiel
 
 Do not postpone this through a passive "complete profile later" option.
 
+## 10a. UserProfile Is Created Automatically
+
+New Django users should receive a `UserProfile` through a `post_save` signal.
+
+Registration code may update the profile, but should not blindly call:
+
+```python
+UserProfile.objects.create(user=user)
+```
+
+Use `get_or_create` when registration or Google auth needs to set profile fields. This prevents duplicate profile rows and protects tests that create users directly.
+
 ## 11. Evidence Verifies Extracted Claims
 
 Evidence should attach to `ExtractedClaim`.
@@ -136,6 +148,14 @@ ExtractedClaim -> Evidence -> verification status
 
 `CanonicalClaim` is created after verification/correction.
 
+The code should use one consistent reverse relation name from `ExtractedClaim` to evidence, preferably:
+
+```python
+evidence_items
+```
+
+Avoid keeping typo names such as `evidences_items` in new code.
+
 ## 12. Flashcards Come From Canonical Knowledge
 
 Flashcards should point to `CanonicalClaim`, not directly to raw notes or unverified extracted claims.
@@ -145,6 +165,13 @@ Reason:
 ```text
 flashcards teach users
 teaching content must be verified/canonical
+```
+
+Verification service behavior should preserve this rule:
+
+```text
+SUPPORTED extracted claim -> CanonicalClaim may be created -> Flashcard may be generated
+CONTRADICTED/UNCERTAIN extracted claim -> no CanonicalClaim -> no Flashcard
 ```
 
 ## 13. OCR And Claim Extraction Are Separate Services
@@ -159,6 +186,10 @@ claims = claim_extractor.extract_claims(ocr_text)
 ```
 
 This keeps provider switching possible.
+
+The OCR/LLM provider is not chosen yet. Until it is chosen, build interfaces and placeholder implementations instead of hardcoding a provider.
+
+Prompt text should live in a dedicated prompt module instead of being scattered through views/services.
 
 ## 14. Use FileField And Storage Configuration
 
@@ -214,3 +245,18 @@ __pycache__/
 
 Commit `.env.example`, migrations, source files, docs, and requirements.
 
+## 18. Tests Should Match Actual Routes
+
+Current auth routes are:
+
+```text
+POST /api/auth/register/
+POST /api/auth/login/
+POST /api/auth/token/refresh/
+```
+
+Do not write tests against older or imagined routes such as `/api/users/login/` unless the URL design is explicitly changed.
+
+## 19. Prefer Fixing Wiring Over Weakening Tests
+
+When tests reveal missing signals, route mismatches, model field typos, or service keyword typos, fix the application wiring. Do not remove important tests just to make the suite pass.

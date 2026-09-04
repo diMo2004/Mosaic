@@ -263,7 +263,7 @@ class Evidence(models.Model):
     claim = models.ForeignKey(
         ExtractedClaim,
         on_delete=models.CASCADE,
-        related_name='evidences_items',
+        related_name='evidence_items',
     )
     source = models.ForeignKey(
         Source,
