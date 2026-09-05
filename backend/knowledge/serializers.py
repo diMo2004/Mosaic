@@ -4,26 +4,7 @@ from .models import CanonicalClaim, Evidence, ExtractedClaim, Source, SourceDocu
 class SourceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Source
-        fields = [
-            "id",
-            "name",
-            "domain",
-            "source_type",
-            "access_method",
-            "license",
-            "license_url",
-            "attribution_required",
-            "commercial_use_allowed",
-            "ai_use_allowed",
-            "scraping_allowed",
-            "api_available",
-            "authority_score",
-            "last_checked",
-            "notes",
-            "created_by",
-            "created_at",
-            "updated_at",
-        ]
+        fields = "__all__"
         read_only_fields = [
             "id",
             "created_by",
@@ -74,6 +55,8 @@ class CanonicalClaimSerializer(serializers.ModelSerializer):
         ]
 
 class EvidenceSerializer(serializers.ModelSerializer):
+    claim_text = serializers.CharField(source='claim.text', read_only=True)
+    source_name = serializers.CharField(source='source.name', read_only=True)
     class Meta:
         model = Evidence
         fields = [

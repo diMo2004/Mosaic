@@ -47,7 +47,7 @@ class ExtractedClaimAdmin(admin.ModelAdmin):
         "created_at",
     ]
     list_filter = ["status", "reviewed_at", "created_at"]
-    search_fields = ["text", "reviewer_notes"]
+    search_fields = ["text", "reviewed_notes"]
     readonly_fields = ["created_at"]
     inlines = [EvidenceInline]
 
@@ -66,7 +66,7 @@ class EvidenceAdmin(admin.ModelAdmin):
         "relevance_score",
     ]
     list_filter = ["relation", "source", "created_at"]
-    search_fields = ["title", "excerpt", "url", "source_name", "claim_text"]
+    search_fields = ["title", "excerpt", "url", "source__name", "claim__text"]
 
 @admin.register(SourceDocument)
 class SourceDocumentAdmin(admin.ModelAdmin):
@@ -104,7 +104,7 @@ class CanonicalClaimAdmin(admin.ModelAdmin):
     ]
 
     list_filter = ["is_active", "created_by_ai", "created_at"]
-    search_fields = ["text", "concept_name"]
+    search_fields = ["text", "concept__name"]
 
     def short_text(self, obj):
         return obj.text[:80]

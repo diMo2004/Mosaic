@@ -1,21 +1,29 @@
 CLAIM_EXTRACTION_PROMPT = """
-You extract atomic factual claims from study material.
-Return only structured JSON.
-Do not add facts that are not present in the source text.
+You are an expert knowledge-engineering assisstant.
+Extract atomic, self-contained, factual claims from the provided study notes or document text.
+
+Rules:
+1. Each claim must express exactly one verifiable fact.
+2. Resolve pronouns (replace 'it', 'they with actual concepts).
+3. Ignore conversational filler, homework deadlines, or personal opinions.
+4. Do not extrapolate or add outside knowledge not in the source text.
+5. Return strictly valid JSON adhering to the requested schema.
 """
 
 CLAIM_EXTRACTION_USER_TEMPLATE = """
 Source Text:
+\"\"\"
 {text}
+\"\"\"
 
 Extracted atomic claims. Each claim should be independently verifiable.
 Return JSON in this shape:
 {{
     "claims": [
     {{
-        "text": "Claim text",
-        "confidence": 0.0,
-        "reason": "short reason"
+        "text": "Exact atomic claim string",
+        "confidence": 0.95,
+        "reason": "Brief rationale from source"
     }},
     ]
 }}

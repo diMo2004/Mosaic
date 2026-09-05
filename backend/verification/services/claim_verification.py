@@ -11,7 +11,7 @@ class ClaimVerificationService:
 
     @transaction.atomic
     def verify_claim(self, extracted_claim: ExtractedClaim):
-        evidence_items = list(extracted_claim.evidence_items.all())
+        evidence_items = list(extracted_claim.evidence_items.select_related("source").all())
 
         if not evidence_items:
             evidence_items = self.evidence_retriever.retrieve_for_claim(extracted_claim)
@@ -31,7 +31,7 @@ class ClaimVerificationService:
             ]
         )
         canonical_claim = None
-        if status != ExtractedClaim.STATUS_CONTRADICTED:
+        if status == ExtractedClaim.STATUS_SUPPORTED:
             canonical_claim = self.create_canonical_claim(extracted_claim, confidence)
 
         flashcard = None
@@ -54,37 +54,42 @@ class ClaimVerificationService:
         ]
 
         if not matching:
-            return Decimal("0.0")
+            return Decimal("0.0"), 0
 
-        total = Decimal("0.00")
-
+        weights = []
         for item in matching:
             authority = item.source.authority_score or Decimal("0.50")
             relevance = item.relevance_score or Decimal("0.50")
-            total += authority * relevance
+            weights.append(authority * relevance)
 
-        average = total / len(matching)
+        weights.sort(reverse=True)
+        primary_weight = weights[0]
+        corroboration_bonus = Decimal("0.00")
+        for w in weights[1:]:
+            corroboration_bonus += (Decimal("1.00") - (primary_weight + corroboration_bonus)) * Decimal("0.20") * w
 
-        if len(matching) >= 2:
-            average += Decimal("0.10")
-
-        return min(average, Decimal("0.95"))
+        total_strength = min(primary_weight + corroboration_bonus, Decimal("0.99"))
+        return total_strength.quantize(Decimal("0.01")), len(matching)
 
 
     def _decide_status(self, evidence_items):
-        supporting_score = self._score_evidence(evidence_items, Evidence.SUPPORTS)
-        contradicting_score = self._score_evidence(evidence_items, Evidence.CONTRADICTS)
+        supporting_strength, supporting_count = self._score_evidence(evidence_items, Evidence.SUPPORTS)
+        contradicting_strength, contradicting_count = self._score_evidence(evidence_items, Evidence.CONTRADICTS)
 
-        if supporting_score > Decimal("0.65") and contradicting_score < Decimal("0.40"):
-            return ExtractedClaim.STATUS_SUPPORTED, supporting_score
+        if supporting_strength >= Decimal("0.65") and contradicting_strength < Decimal("0.35"):
+            net_confidence = supporting_strength - (contradicting_strength * Decimal("0.50"))
+            return ExtractedClaim.STATUS_SUPPORTED, max(net_confidence, Decimal("0.50")).quantize(Decimal("0.01"))
+        
+        if contradicting_strength >= Decimal("0.65") and supporting_strength < Decimal("0.35"):
+            net_confidence = contradicting_strength - (supporting_strength * Decimal("0.50"))
+            return ExtractedClaim.STATUS_CONTRADICTED, max(net_confidence, Decimal("0.50")).quantize(Decimal("0.01"))
 
-        if contradicting_score > Decimal("0.65") and supporting_score < Decimal("0.40"):
-            return ExtractedClaim.STATUS_CONTRADICTED, contradicting_score
+        if supporting_strength >= Decimal("0.40") and contradicting_strength >= Decimal("0.40"):
+            conflict_diff = abs(supporting_strength - contradicting_strength)
+            return ExtractedClaim.STATUS_PARTIALLY_SUPPORTED, max(conflict_diff, Decimal("0.30")).quantize(Decimal("0.01"))
 
-        if supporting_score > Decimal("0.40") and contradicting_score > Decimal("0.40"):
-            return ExtractedClaim.STATUS_PARTIALLY_SUPPORTED, max(supporting_score, contradicting_score)
-
-        return ExtractedClaim.STATUS_UNCERTAIN, max(supporting_score, contradicting_score, Decimal("0.30"))
+        max_strength = max(supporting_strength, contradicting_strength, Decimal("0.10"))
+        return ExtractedClaim.STATUS_UNCERTAIN, max_strength.quantize(Decimal("0.01"))
 
     def create_canonical_claim(self, extracted_claim: ExtractedClaim, confidence):
         concept, _ = Concept.objects.get_or_create(

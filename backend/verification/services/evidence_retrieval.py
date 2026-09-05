@@ -2,7 +2,7 @@ from django.utils import timezone
 from knowledge.models import Evidence, Source
 
 class EvidenceRetrievalService:
-    def retrieve_evidence(self, extracted_claim):
+    def retrieve_for_claim(self, extracted_claim):
         source, _ = Source.objects.get_or_create(
             name="Placeholder Educational Source",
             defaults={
@@ -24,4 +24,6 @@ class EvidenceRetrievalService:
         )
 
         return [evidence]
+
+    retrieve_evidence = retrieve_for_claim
 

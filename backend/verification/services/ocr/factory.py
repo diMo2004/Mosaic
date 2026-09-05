@@ -14,11 +14,34 @@ _CACHED_AZURE_CLIENT = None
 
 def get_gemini_model():
     global _CACHED_GEMINI
+
     if _CACHED_GEMINI is None:
-        api_key = getattr(settings, "GEMINI_API_KEY", os.getenv("GEMINI_API_KEY", ""))
-        if api_key:
-            genai.configure(api_key=api_key)
-        _CACHED_GEMINI = genai.GenerativeModel('gemini-1.5-flash')
+        api_key = getattr(
+            settings,
+            "GEMINI_API_KEY",
+            os.getenv("GEMINI_API_KEY", ""),
+        )
+
+        if not api_key:
+            return None
+
+        client = genai.Client(api_key=api_key)
+
+        model_name = getattr(
+            settings,
+            "GEMINI_OCR_MODEL",
+            "gemini-3.6-flash",
+        )
+
+        class GeminiModelWrapper:
+            def generate_content(self, contents):
+                return client.models.generate_content(
+                    model=model_name,
+                    contents=contents,
+                )
+
+        _CACHED_GEMINI = GeminiModelWrapper()
+
     return _CACHED_GEMINI
 
 
