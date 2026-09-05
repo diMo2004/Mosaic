@@ -3,8 +3,8 @@ from django.utils import timezone
 from knowledge.models import ExtractedClaim, Source, SourceDocument
 from notes.models import Note
 from verification.models import NoteProcessingJob
-from verification.services.ocr.factory import get_ocr_provider
 from verification.services.claim_extraction import ClaimExtractionService
+from verification.services.ocr.factory import HybridOCRProvider
 
 class NoteProcessingService:
     def process(self, note_id: int):
@@ -34,7 +34,7 @@ class NoteProcessingService:
 
     @transaction.atomic
     def _process_note(self, note: Note, job: NoteProcessingJob):
-        ocr_provider = get_ocr_provider()
+        ocr_provider = HybridOCRProvider()
         extracted_text = ocr_provider.extract_text(note.file)
         note.extracted_text = extracted_text
         note.status = Note.STATUS_OCR_DONE

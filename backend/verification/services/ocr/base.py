@@ -3,3 +3,5 @@ class OCRProvider(ABC):
     @abstractmethod
     def extract_text(self, image_path: str) -> str:
         raise NotImplementedError
+
+BaseOCRProvider = OCRProvider

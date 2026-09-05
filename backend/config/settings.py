@@ -37,6 +37,9 @@ NOTE_UPLOAD_ALLOWED_CONTENT_TYPES = os.getenv(
     "NOTE_UPLOAD_ALLOWED_CONTENT_TYPES", "application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png,text/plain,image/webp,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation",).split(",")
 
 OCR_PROVIDER =os.getenv("OCR_PROVIDER", "placeholder")  # Default to placeholder OCR provider
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")  # Default to empty string if not set
+AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT = os.getenv("AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT", "")
+AZURE_DOCUMENT_INTELLIGENCE_KEY = os.getenv("AZURE_DOCUMENT_INTELLIGENCE_KEY", "")
 
 # Application definition
 
