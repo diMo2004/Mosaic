@@ -16,12 +16,12 @@ class ClaimVerificationService:
         if not evidence_items:
             evidence_items = self.evidence_retriever.retrieve_for_claim(extracted_claim)
 
-        status, confidence = self._decide_status(evidence_items)
+        status, confidence, notes = self._decide_status(evidence_items)
 
         extracted_claim.status = status
         extracted_claim.confidence = confidence
         extracted_claim.reviewed_at = timezone.now()
-        extracted_claim.reviewed_notes = "Placeholder verification result."
+        extracted_claim.reviewed_notes = notes
         extracted_claim.save(
             update_fields=[
                 "status",
@@ -47,7 +47,7 @@ class ClaimVerificationService:
             "flashcard": flashcard,
         }
 
-    def _score_evidence(self, evidence_items,relation):
+    def _score_evidence(self, evidence_items, relation):
         matching = [
             item for item in evidence_items
             if item.relation == relation
@@ -76,20 +76,51 @@ class ClaimVerificationService:
         supporting_strength, supporting_count = self._score_evidence(evidence_items, Evidence.SUPPORTS)
         contradicting_strength, contradicting_count = self._score_evidence(evidence_items, Evidence.CONTRADICTS)
 
-        if supporting_strength >= Decimal("0.65") and contradicting_strength < Decimal("0.35"):
-            net_confidence = supporting_strength - (contradicting_strength * Decimal("0.50"))
-            return ExtractedClaim.STATUS_SUPPORTED, max(net_confidence, Decimal("0.50")).quantize(Decimal("0.01"))
-        
-        if contradicting_strength >= Decimal("0.65") and supporting_strength < Decimal("0.35"):
-            net_confidence = contradicting_strength - (supporting_strength * Decimal("0.50"))
-            return ExtractedClaim.STATUS_CONTRADICTED, max(net_confidence, Decimal("0.50")).quantize(Decimal("0.01"))
+        notes = (
+            f"Evidence analysis: {supporting_count} supporting (strength {supporting_strength}), "
+            f"{contradicting_count} contradicting (strength {contradicting_strength})."
+        )
+        if supporting_count == 0 and contradicting_count == 0:
+            return ExtractedClaim.STATUS_UNCERTAIN, Decimal("0.00"), notes
+        is_clear_support = (
+            supporting_strength >= Decimal("0.65") and (
+                contradicting_count == 0
+                or contradicting_strength < Decimal("0.35")
+                or (
+                    supporting_count >= 2
+                    and supporting_count >= 2 * contradicting_count
+                    and supporting_strength >= contradicting_strength + Decimal("0.25")
+                )
+            )
+        )
+        if is_clear_support:
+            net_confidence = supporting_strength - (contradicting_strength * Decimal("0.40"))
+            if supporting_count == 1:
+                net_confidence = min(net_confidence, Decimal("0.85"))
+            return ExtractedClaim.STATUS_SUPPORTED, max(net_confidence, Decimal("0.50")).quantize(Decimal("0.01")), notes
+        is_clear_contradiction = (
+            contradicting_strength >= Decimal("0.65") and (
+                supporting_count == 0
+                or supporting_strength < Decimal("0.35")
+                or (
+                    contradicting_count >= 2
+                    and contradicting_count >= 2 * supporting_count
+                    and contradicting_strength >= supporting_strength + Decimal("0.25")
+                )
+            )
+        )
+        if is_clear_contradiction:
+            net_confidence = contradicting_strength - (supporting_strength * Decimal("0.40"))
+            if contradicting_count == 1:
+                net_confidence = min(net_confidence, Decimal("0.85"))
+            return ExtractedClaim.STATUS_CONTRADICTED, max(net_confidence, Decimal("0.50")).quantize(Decimal("0.01")), notes
 
         if supporting_strength >= Decimal("0.40") and contradicting_strength >= Decimal("0.40"):
             conflict_diff = abs(supporting_strength - contradicting_strength)
-            return ExtractedClaim.STATUS_PARTIALLY_SUPPORTED, max(conflict_diff, Decimal("0.30")).quantize(Decimal("0.01"))
+            return ExtractedClaim.STATUS_PARTIALLY_SUPPORTED, max(conflict_diff, Decimal("0.30")).quantize(Decimal("0.01")), notes
 
         max_strength = max(supporting_strength, contradicting_strength, Decimal("0.10"))
-        return ExtractedClaim.STATUS_UNCERTAIN, max_strength.quantize(Decimal("0.01"))
+        return ExtractedClaim.STATUS_UNCERTAIN, max_strength.quantize(Decimal("0.01")), notes
 
     def create_canonical_claim(self, extracted_claim: ExtractedClaim, confidence):
         concept, _ = Concept.objects.get_or_create(

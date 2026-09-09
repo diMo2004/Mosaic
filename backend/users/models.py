@@ -12,7 +12,7 @@ class UserProfile(models.Model):
     ]
 
     user = models.OneToOneField(
-        settings.AUTH_USER_MODEL,
+        settings.AUTH_USER_MODEL, ##Check this line
         on_delete=models.CASCADE,
         related_name='profile',
     )
