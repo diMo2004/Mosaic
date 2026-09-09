@@ -241,3 +241,86 @@ class Evidence(models.Model):
 
     def __str__(self):
         return f"{self.claim_id} - {self.source.name} ({self.relation})"
+
+class ConceptRelationship(models.Model):
+    RELATION_PARENT = "parent"
+    RELATION_RELATED = "related"
+    RELATION_IMPLEMENTS = "implements"
+    RELATION_BUILDS_ON = "builds_on"
+    RELATION_USED_BY = "used_by"
+    RELATION_ALTERNATIVE = "alternative"
+
+    RELATION_CHOICES = [
+        (RELATION_PARENT, "Parent"),
+        (RELATION_RELATED, "Related"),
+        (RELATION_IMPLEMENTS, "Implements"),
+        (RELATION_BUILDS_ON, "Builds On"),
+        (RELATION_USED_BY, "Used By"),
+        (RELATION_ALTERNATIVE, "Alternative"),
+    ]
+
+    from_concept = models.ForeignKey(
+        Concept,
+        on_delete=models.CASCADE,
+        related_name='outgoing_relations',
+    )
+    to_concept = models.ForeignKey(
+        Concept,
+        on_delete=models.CASCADE,
+        related_name='incoming_relations',
+    )
+    relation_type = models.CharField(
+        max_length=30,
+        choices=RELATION_CHOICES,
+        default=RELATION_RELATED,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('from_concept', 'to_concept', 'relation_type')
+        ordering = ["from_concept__name"]
+
+    def __str__(self):
+        return f"{self.from_concept.name} --({self.relation_type})--> {self.to_concept.name}"
+
+class UnmappedConceptReview(models.Model):
+    STATUS_PENDING = 'pending'
+    STATUS_APPROVED = 'approved'
+    STATUS_REJECTED = 'rejected'
+
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending Developer Review'),
+        (STATUS_APPROVED, 'Approved & Added to Taxonomy'),
+        (STATUS_REJECTED, 'Rejected / Not a Valid Concept'),
+    ]
+
+    suggested_name = models.CharField(max_length=255)
+    context_claim = models.ForeignKey(
+        "knowledge.ExtractedClaim",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='unmapped_reviews',
+    )
+    context_text = models.TextField(help_text="Snippet of text where the term was found")
+    status = models.CharField(
+        max_length=30,
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING,
+    )
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reviewed_concepts',
+    )
+    resolution_notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Review of '{self.suggested_name}' - Status: {self.status}"

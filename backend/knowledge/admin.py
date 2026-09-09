@@ -1,5 +1,8 @@
 from django.contrib import admin
-from .models import Evidence, Source, CanonicalClaim, Concept, ExtractedClaim, SourceDocument
+from django.utils.text import slugify
+from django.utils import timezone
+from .models import Evidence, Source, CanonicalClaim, Concept, ExtractedClaim, SourceDocument, ConceptRelationship, UnmappedConceptReview
+from verification.services.concept_assignment import invalidate_cached_graph
 # Register your models here.
 
 @admin.register(Source)
@@ -108,3 +111,47 @@ class CanonicalClaimAdmin(admin.ModelAdmin):
 
     def short_text(self, obj):
         return obj.text[:80]
+
+@admin.register(ConceptRelationship)
+class ConceptRelationshipAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "from_concept",
+        "relation_type",
+        "to_concept",
+        "created_at"
+    ]
+    list_filter = ["relation_type", "created_at"]
+    search_fields = ["from_concept__name", "to_concept__name"]
+
+@admin.register(UnmappedConceptReview)
+class UnmappedConceptReviewAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "suggested_name",
+        "status",
+        "created_at",
+    ]
+    list_filter = ["status", "created_at"]
+    search_fields = ["suggested_name", "context_text"]
+    actions = ["approve_and_add_to_graph"]
+
+    @admin.action(description="Approve selected terms and add them to official Concept taxonomy")
+    def approve_and_add_to_graph(self, request, queryset):
+        approved_count = 0
+        for item in queryset.filter(status=UnmappedConceptReview.STATUS_PENDING):
+            concept, _ = Concept.objects.get_or_create(
+                slug=slugify(item.suggested_name),
+                defaults={
+                    "name": item.suggested_name,
+                    "description": f"Approved from context: {item.context_text[:100]}",
+                }
+            )
+            item.status = UnmappedConceptReview.STATUS_APPROVED
+            item.reviewed_by = request.user
+            item.resolution_notes = f"Approved and added to Concept ID {concept.id}."
+            item.save()
+            approved_count += 1
+
+        invalidate_cached_graph()
+        self.message_user(request, f"Successfully approved {approved_count} concept(s) into taxonomy.")

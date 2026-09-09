@@ -123,12 +123,11 @@ class ClaimVerificationService:
         return ExtractedClaim.STATUS_UNCERTAIN, max_strength.quantize(Decimal("0.01")), notes
 
     def create_canonical_claim(self, extracted_claim: ExtractedClaim, confidence):
-        concept, _ = Concept.objects.get_or_create(
-            name="General Knowledge",
-            defaults={
-                "slug": "general-knowledge",
-                "description": "Temporary concept bucket for early MVP claims.",
-            },
+        from verification.services.concept_assignment import ConceptAssignmentService
+        assignment_service = ConceptAssignmentService()
+        concept, _ = assignment_service.assign_concept(
+            claim_text=extracted_claim.text,
+            source_claim=extracted_claim,
         )
 
         canonical_claim, _ = CanonicalClaim.objects.get_or_create(
