@@ -1,4 +1,5 @@
 from django.test import TestCase
+from unittest.mock import patch, MagicMock
 
 # Create your tests here.
 #Placeholder evidence is created if no evidence exists
@@ -38,9 +39,12 @@ class ClaimVerificationServiceTests(TestCase):
             source_document=self.document,
             text="BFS uses a queue.",
         )
-
-    def test_supported_claim_creates_canonical_claim_and_flashcard(self):
+    @patch("verification.services.concept_assignment.ConceptAssignmentService")
+    def test_supported_claim_creates_canonical_claim_and_flashcard(self, MockConceptService):
         # Create supporting evidence
+        mock_instance = MagicMock()
+        mock_instance.assign_concepts.return_value = None
+        MockConceptService.return_value = mock_instance
         Evidence.objects.create(
             claim=self.claim,
             source=self.source,

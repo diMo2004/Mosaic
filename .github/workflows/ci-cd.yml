@@ -51,7 +51,7 @@ jobs:
 
       - name: Run Django Tests
         env:
-          SECRET_KEY: test-secret-key-ci
+          SECRET_KEY: test-secret-key-for-ci-use-only-at-least-32-chars
           DEBUG: "True"
           DATABASE_URL: postgresql://test_mosaic_user:test_mosaic_password@localhost:5432/test_mosaic_db
           ALLOWED_HOSTS: localhost,127.0.0.1
