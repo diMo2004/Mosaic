@@ -2,8 +2,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
-.venv/
-venv/
+.venv*
 
 # Django
 db.sqlite3
@@ -23,3 +22,7 @@ Thumbs.db
 
 #docs
 docs/tasks.md
+
+# Gunicorn runtime files (created by Docker volume mount on Windows)
+.gunicorn/
+backend/.gunicorn/

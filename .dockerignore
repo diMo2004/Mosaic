@@ -1,0 +1,68 @@
+# ==========================================
+# 1. Version Control & CI/CD
+# ==========================================
+.git
+.github
+.gitignore
+.gitattributes
+
+# ==========================================
+# 2. Environments & Secrets (Never bake into images)
+# ==========================================
+.env
+.env*
+*.env
+*.pem
+*.key
+
+# ==========================================
+# 3. Python & Virtual Environments
+# ==========================================
+__pycache__
+**/__pycache__
+*.py[cod]
+*$py.class
+.venv*
+venv*
+*/venv*
+*/.venv*
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ==========================================
+# 4. Django Local Data & Static Files
+# ==========================================
+db.sqlite3
+**/db.sqlite3
+media/
+**/media/
+staticfiles/
+**/staticfiles/
+
+# ==========================================
+# 5. Non-Backend Project Folders & Files
+# ==========================================
+mobile/
+docs/
+infra/
+README.md
+LICENSE
+sample-note.txt
+-H
+backend/-H
+
+# ==========================================
+# 6. IDEs and OS Artifacts
+# ==========================================
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+
+# ==========================================
+# 7. Gunicorn runtime files (created by Docker volume mount on Windows)
+# ==========================================
+.gunicorn/
+backend/.gunicorn/

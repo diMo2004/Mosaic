@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: mosaic-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mosaic_db
+      POSTGRES_USER: mosaic_user
+      POSTGRES_PASSWORD: mosaic_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: mosaic-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=True
+      - SECRET_KEY=local-dev-secret-key
+      - ALLOWED_HOSTS=localhost,127.0.0.1,backend
+      - DATABASE_URL=postgres://mosaic_user:mosaic_password@db:5432/mosaic_db
+      - OCR_PROVIDER=placeholder
+    depends_on:
+      - db
+    volumes:
+      - ./backend:/app
+
+volumes:
+  postgres_data:
