@@ -59,6 +59,7 @@ jobs:
           GOOGLE_OAUTH_CLIENT_ID: test-google-client-id
           GEMINI_CLAIM_MODEL: gemini-3.6-flash
           GEMINI_OCR_MODEL: gemini-3.6-flash
+          CORS_ALLOWED_ORIGINS: http://localhost:8081,http://localhost:19006
         run: |
           cd backend
           python manage.py test
