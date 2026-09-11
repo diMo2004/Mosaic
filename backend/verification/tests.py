@@ -13,6 +13,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from knowledge.models import (
     CanonicalClaim,
+    Concept,
     Evidence,
     Source,
     ExtractedClaim,
@@ -42,8 +43,9 @@ class ClaimVerificationServiceTests(TestCase):
     @patch("verification.services.concept_assignment.ConceptAssignmentService")
     def test_supported_claim_creates_canonical_claim_and_flashcard(self, MockConceptService):
         # Create supporting evidence
+        concept = Concept.objects.create(name="BFS", slug="bfs")
         mock_instance = MagicMock()
-        mock_instance.assign_concepts.return_value = None
+        mock_instance.assign_concept.return_value = concept
         MockConceptService.return_value = mock_instance
         Evidence.objects.create(
             claim=self.claim,

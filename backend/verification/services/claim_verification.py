@@ -125,7 +125,7 @@ class ClaimVerificationService:
     def create_canonical_claim(self, extracted_claim: ExtractedClaim, confidence):
         from verification.services.concept_assignment import ConceptAssignmentService
         assignment_service = ConceptAssignmentService()
-        concept, _ = assignment_service.assign_concept(
+        concept = assignment_service.assign_concept(
             claim_text=extracted_claim.text,
             source_claim=extracted_claim,
         )
