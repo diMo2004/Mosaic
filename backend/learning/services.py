@@ -5,6 +5,8 @@ class FlashcardGenerationService:
         """
         Generate flashcards from a given canonical claim.
         """
+        if canonical_claim is None:
+            raise ValueError("Flashcards can only be generated from a CanonicalClaim.")
         # Placeholder logic for generating flashcards
         flashcard, _ = Flashcard.objects.get_or_create(
             source_claim=canonical_claim,
@@ -12,9 +14,7 @@ class FlashcardGenerationService:
                 "title": canonical_claim.concept.name,
                 "prompt": f"What should you know about: {canonical_claim.text}?",
                 "answer": canonical_claim.text,
-                "explanation": (
-                    "This flashcard was generated from a canonical claim.",
-                ),
+                "explanation": "This flashcard was generated from a canonical claim.",
                 "difficulty": Flashcard.DIFFICULTY_BEGINNER,
                 "is_active": True,
                 "created_by_ai": False,

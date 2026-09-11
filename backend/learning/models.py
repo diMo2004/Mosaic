@@ -41,25 +41,58 @@ class Flashcard(models.Model):
     def __str__(self):
         return self.title
 
-class SavedFlashcard(models.Model):
+class Playlist(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='saved_flashcards',
+        related_name='playlists',
+    )
+    name = models.CharField(max_length=255)
+    is_default = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-is_default', 'name']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'name'],
+                name='unique_default_playlist_per_user',
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.user.user_id})"
+
+    @classmethod
+    def get_default_for_user(cls, user):
+        playlist, _ = cls.objects.get_or_create(
+            user=user,
+            is_default=True,
+            defaults={'name': 'Saved'},
+        )
+        return playlist
+    
+class PlaylistItem(models.Model):
+    playlist = models.ForeignKey(
+        Playlist,
+        on_delete=models.CASCADE,
+        related_name='items',
     )
     flashcard = models.ForeignKey(
         Flashcard,
         on_delete=models.CASCADE,
-        related_name='saved_by_users',
+        related_name='playlist_items',
     )
-    saved_at = models.DateTimeField(auto_now_add=True)
+    added_at = models.DateTimeField(auto_now_add=True)
+    position = models.PositiveIntegerField(default=0)
 
     class Meta:
-        unique_together = ('user', 'flashcard')
-        ordering = ['-saved_at']
+        unique_together = ('playlist', 'flashcard')
+        ordering = ['position','added_at']
 
     def __str__(self):
-        return f"{self.user.user_id} saved {self.flashcard_id}"
+        return f"{self.flashcard_id} in {self.playlist_id}"
 
 class FlashcardFeedback(models.Model):
     FEEDBACK_LIKE = 'like'

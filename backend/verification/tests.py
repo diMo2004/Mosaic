@@ -64,6 +64,10 @@ class ClaimVerificationServiceTests(TestCase):
         self.assertIsNotNone(canonical_claim)
         self.assertEqual(CanonicalClaim.objects.count(), 1)
         self.assertEqual(Flashcard.objects.count(), 1)
+        self.assertEqual(
+            Flashcard.objects.get().source_claim_id,
+            result["canonical_claim"].id,
+        )
 
     def test_contradicted_claim_does_not_create_canonical_claim(self):
         Evidence.objects.create(
