@@ -4,6 +4,7 @@ from knowledge.models import ExtractedClaim, Source, SourceDocument
 from notes.models import Note
 from verification.models import NoteProcessingJob
 from verification.services.claim_extraction import ClaimExtractionService
+from verification.services.claim_verification import ClaimVerificationService
 from verification.services.ocr.factory import HybridOCRProvider
 
 class NoteProcessingService:
@@ -25,8 +26,8 @@ class NoteProcessingService:
         except Exception as exc:
             job.status = NoteProcessingJob.STATUS_FAILED
             job.error_message = str(exc)
-            job.failed_at = timezone.now()
-            job.save(update_fields=['status', 'error_message', 'failed_at', 'updated_at'])
+            job.completed_at = timezone.now()
+            job.save(update_fields=['status', 'error_message', 'completed_at', 'updated_at'])
             note.status = Note.STATUS_FAILED
             note.processing_error = str(exc)
             note.save(update_fields=['status', 'processing_error', 'updated_at'])
@@ -61,17 +62,28 @@ class NoteProcessingService:
         extractor = ClaimExtractionService()
         claims = extractor.extract_claims(extracted_text)
 
+        extracted_claims = []
         for claim_text in claims:
-            ExtractedClaim.objects.create(
+            claim = ExtractedClaim.objects.create(
                 source_document=source_document,
                 text=claim_text,
             )
+            extracted_claims.append(claim)
 
         job.status = NoteProcessingJob.STATUS_CLAIMS_EXTRACTED
+        job.save(update_fields=['status', 'updated_at'])
+        note.status = Note.STATUS_CLAIMS_EXTRACTED
+        note.save(update_fields=['status', 'updated_at'])
+
+        verification_service = ClaimVerificationService()
+        for claim in extracted_claims:
+            verification_service.verify_claim(claim)
+
+        job.status = NoteProcessingJob.STATUS_VERIFIED    
         job.completed_at = timezone.now()
         job.save(update_fields=['status', 'completed_at', 'updated_at'])
 
-        note.status = Note.STATUS_CLAIMS_EXTRACTED
+        note.status = Note.STATUS_VERIFIED
         note.save(update_fields=['status', 'updated_at'])
 
         return job

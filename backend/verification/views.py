@@ -6,9 +6,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from knowledge.models import ExtractedClaim
 from .services.claim_verification import ClaimVerificationService
+from users.permissions import IsProfileComplete
 
 class VerifyClaimView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsProfileComplete]
 
     def post(self, request, pk):
         try:

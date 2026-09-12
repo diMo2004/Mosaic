@@ -8,6 +8,7 @@ from rest_framework.views import APIView
 from .models import Flashcard, FlashcardFeedback, Playlist, PlaylistItem, UserProgress
 from .serializers import FlashcardSerializer, FlashcardFeedbackSerializer, PlaylistDetailSerializer, PlaylistSerializer
 from knowledge.models import CanonicalClaim
+from users.permissions import IsProfileComplete
 # Create your views here.
 
 def active_flashcards():
@@ -20,14 +21,14 @@ def active_flashcards():
 
 class FlashcardFeedView(generics.ListAPIView):
     serializer_class = FlashcardSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsProfileComplete]
 
     def get_queryset(self):
         return active_flashcards()
     
 class FlashcardDetailView(generics.RetrieveAPIView):
     serializer_class = FlashcardSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsProfileComplete]
 
     def get_queryset(self):
         return active_flashcards()
@@ -45,7 +46,7 @@ class FlashcardDetailView(generics.RetrieveAPIView):
         return Response(serializer.data)
 
 class SaveFlashCardView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsProfileComplete]
 
     def post(self, request, pk):
         flashcard = get_object_or_404(
@@ -94,7 +95,7 @@ class SaveFlashCardView(APIView):
         )
 
 class FlashcardFeedbackView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsProfileComplete]
 
     def post(self, request, pk):
         flashcard = get_object_or_404(
@@ -111,7 +112,7 @@ class FlashcardFeedbackView(APIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 class UserProgressSummaryView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsProfileComplete]
 
     def get(self, request):
         progress = UserProgress.objects.filter(user=request.user)
@@ -135,7 +136,7 @@ class UserProgressSummaryView(APIView):
 
 class PlaylistListCreateView(generics.ListCreateAPIView):
     serializer_class = PlaylistSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsProfileComplete]
 
     def get_queryset(self):
         Playlist.get_default_for_user(self.request.user)  # Ensure default playlist exists
@@ -147,7 +148,7 @@ class PlaylistListCreateView(generics.ListCreateAPIView):
         serializer.save(user=self.request.user, is_default=False)
 
 class PlaylistDetailView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsProfileComplete]
 
     def get_queryset(self):
         return Playlist.objects.filter(user=self.request.user)
@@ -164,7 +165,7 @@ class PlaylistDetailView(generics.RetrieveUpdateDestroyAPIView):
         instance.delete()
 
 class GroundedExplanationView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsProfileComplete]
 
     def get(self, request, pk):
         canonical_claim = get_object_or_404(

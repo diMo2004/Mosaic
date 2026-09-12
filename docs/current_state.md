@@ -1,24 +1,49 @@
 # Current State
 
-This document describes where the MOSAIC backend currently stands. It should be updated whenever a meaningful project milestone is completed.
+This document describes where MOSAIC currently stands. Update it after each meaningful milestone.
 
 ## Project Status
 
-The project is in early backend MVP development.
+The backend MVP through **flashcards (tasks category 7)** is largely implemented. Category 8 (mobile) has not started. Production-shaped infrastructure exists for **local Docker Postgres**, **GitHub Actions CI**, and **Render deploy**, but Celery, S3, and pgvector are still future work.
 
-Completed or partially completed:
+First product audience: **CSE students**.
+
+Completed or in place:
 
 ```text
-Phase 0 repo setup
-Django + DRF backend scaffold
-JWT login/refresh working
-Basic users app
-Basic notes app
-Basic knowledge app
-Basic learning app
-Verification app and service layer started
-Local media settings exist
-Backend tests started for auth, notes, permissions, and verification
+Django + DRF + SimpleJWT
+users, notes, knowledge, verification, learning apps
+Email/password register + login + token refresh
+Google auth endpoint + complete-profile endpoint
+Note upload (all authenticated users)
+Gated note list/detail (can_view_own_notes)
+NoteProcessingJob + synchronous process_note_placeholder after upload
+Hybrid OCR (Gemini primary, Azure fallback, placeholder if no keys)
+LLM/fallback claim extraction
+Source, SourceDocument, ExtractedClaim, Evidence, Concept,
+ConceptRelationship, UnmappedConceptReview, CanonicalClaim
+Claim verification with authority/relevance scoring
+CanonicalClaim + Flashcard only for SUPPORTED claims
+Concept assignment via Postgres taxonomy + NetworkX 1-hop cache
+Flashcard APIs: feed, detail, playlist save/unsave, feedback, progress
+Playlist list/create/detail
+Placeholder grounded explanation endpoint
+Learning + verification tests
+CI (pytest-equivalent: python manage.py test) + Docker image build + Render hook
+README local-setup section
+```
+
+Not started or incomplete:
+
+```text
+Expo / mobile app
+IsProfileComplete enforced on app APIs
+Auto-verify claims at the end of note processing (job often stops at CLAIMS_EXTRACTED)
+Personal vs public flashcard environments
+LLM flashcard copy and real RAG explanations
+Celery/Redis, S3, pgvector
+External source ingestion (GitHub, MDN, etc.)
+Recommendations, mastery, contributor rewards, social
 ```
 
 ## Authentication
@@ -26,21 +51,24 @@ Backend tests started for auth, notes, permissions, and verification
 Implemented:
 
 ```text
-Email/password registration
-Email/password login
-JWT access and refresh token response
-Token refresh route
-UserProfile model
-UserProfile auto-create signal for newly created users
+POST /api/auth/register/
+POST /api/auth/login/
+POST /api/auth/token/refresh/
+POST /api/auth/google-auth/
+POST /api/auth/complete-profile/
+UserProfile auto-create signal
+Google ID token verified on the backend
+Missing Google profile fields returned as profile_required
 ```
 
-Known working endpoint:
+Still needed:
 
 ```text
-POST /api/auth/login/
+IsProfileComplete permission on protected app APIs
+Mobile Google sign-in + immediate profile form
 ```
 
-Expected login response:
+Login still returns:
 
 ```json
 {
@@ -49,230 +77,188 @@ Expected login response:
 }
 ```
 
-Planned but not fully completed:
-
-```text
-Google sign-in
-Immediate mandatory profile completion after Google sign-in
-Profile-completion permission blocking
-```
-
-Recent test-related correction:
-
-```text
-Tests must use /api/auth/register/ and /api/auth/login/, not /api/users/register/ or /api/users/login/.
-RegisterSerializer should not create duplicate UserProfile rows now that the post_save signal creates profiles automatically.
-Use UserProfile.objects.get_or_create(...) when registration needs to update profile fields.
-```
-
 ## Notes
 
 Implemented:
 
 ```text
-Note model
-Authenticated upload endpoint
-Local media storage
-Owner field
-Basic file metadata
-Basic upload status
-Premium/contributor permission for viewing own notes
-Owner-filtered list/detail views
-Notes admin registration
-Tests started for upload and note-library permissions
-```
-
-Important product state:
-
-```text
-All authenticated users should be allowed to upload notes.
-Only eligible users should list or view their uploaded note history/details.
-```
-
-Current intended note endpoints:
-
-```text
 POST /api/notes/upload/
 GET  /api/notes/
 GET  /api/notes/{id}/
+Owner stored on every note
+Upload triggers process_note_placeholder(note.id) in-process
+Note.status + extracted_text + processing_error
 ```
 
-Still needs:
+Access:
 
 ```text
-Continue hardening file validation
-Processing job creation after upload
-OCR integration
-Claim extraction from uploaded note
-Real async/background processing
+Any authenticated user can upload.
+Only users with profile.can_view_own_notes can list/detail their notes.
+That flag stays gated until a later reward/contributor system.
+```
+
+Still needed:
+
+```text
+Hardening file validation
+Async workers (Celery) instead of blocking the upload request
+Wire verification into the processing job so status can become VERIFIED
+Fix NoteProcessingJob.failed_at if the fail path still writes a field that is not on the model
 ```
 
 ## Knowledge
 
-Implemented or being shaped:
+Implemented:
 
 ```text
-Source model
-SourceDocument model
-ExtractedClaim model
-Evidence model
-Concept model
-CanonicalClaim model
-Admin/API foundation for source and evidence review
+Source, SourceDocument, ExtractedClaim, Evidence
+Concept, ConceptRelationship, UnmappedConceptReview
+CanonicalClaim
+Admin for sources, evidence, claims, concepts, relationships, unmapped review
+APIs:
+  /api/knowledge/sources/
+  /api/knowledge/source-documents/
+  /api/knowledge/extracted-claims/
+  /api/knowledge/canonical-claims/
+  /api/knowledge/evidence/
 ```
 
-Important model direction:
+Graph strategy (category 6):
 
 ```text
-The earlier Claim model should be treated as the extracted-claim concept or replaced by ExtractedClaim while the project is still young.
-Evidence should point to ExtractedClaim.
-Flashcard should point to CanonicalClaim.
+Taxonomy lives in PostgreSQL (Concept + ConceptRelationship).
+NetworkX DiGraph is an in-memory cache for assignment.
+assign_concept: keyword anchors → 1-hop candidates → Gemini pick or UnmappedConceptReview.
+Admin approve_and_add_to_graph creates a Concept and invalidates the cache.
+Approved concepts do not yet get parent/related edges automatically.
 ```
 
-Known cleanup needed:
+Still needed:
 
 ```text
-Remove duplicated fields in Source if present.
-Fix related_name typo if still present: evidences_items should become evidence_items.
-Make model names line up with the architecture before the database becomes costly to change.
-```
-
-Recent test-related correction:
-
-```text
-SourceDocument currently uses DOCUMENT_TYPE_WEBPAGE, not DOCUMENT_TYPE_WEB_PAGE.
-Tests should either use SourceDocument.DOCUMENT_TYPE_WEBPAGE or the model constant should be renamed consistently.
-```
-
-## Learning
-
-Implemented or partially implemented:
-
-```text
-Flashcard model
-SavedFlashcard model
-FlashcardFeedback model
-UserProgress model
-Flashcard feed/detail views
-Save/unsave endpoint
-Feedback endpoint
-Progress summary endpoint
-Admin registrations
-Tests started around flashcard creation through verification
-```
-
-Current intended learning endpoints:
-
-```text
-GET    /api/learning/flashcards/
-GET    /api/learning/flashcards/{id}/
-POST   /api/learning/flashcards/{id}/save/
-DELETE /api/learning/flashcards/{id}/save/
-POST   /api/learning/flashcards/{id}/feedback/
-GET    /api/learning/progress/
-```
-
-Recently encountered fixes:
-
-```text
-Use get_or_create, not get_or_created.
-Use aggregate(total=Sum("view_count")).get("total") or 0.
-Use SavedFlashcard.objects.filter(user=request.user), not flashcard=request.user.
-Use raw URLs with curl.exe, not Markdown links.
+Remove duplicated Source.source_type / access_method field declarations if still in models
+Attach taxonomy edges when approving unmapped concepts
+knowledge/tests.py is still empty
 ```
 
 ## Verification
 
-Current state:
-
-```text
-verification app exists
-claim verification service started
-evidence retrieval placeholder planned/started
-verification tests started
-prompt template module started
-NoteProcessingJob still needs to be finalized if not already added
-placeholder note-processing task still needs to be finalized if not already added
-```
-
-Planned model:
+Implemented:
 
 ```text
 NoteProcessingJob
-- note
-- status
-- error_message
-- started_at
-- completed_at
-- created_at
-- updated_at
+NoteProcessingService (OCR → SourceDocument → ExtractedClaim)
+OCR interface + HybridOCRProvider + placeholder
+ClaimExtractionService (LLM with fallback)
+EvidenceRetrievalService placeholder
+ClaimVerificationService (SUPPORTED / CONTRADICTED / PARTIALLY_SUPPORTED / UNCERTAIN)
+Authority × relevance scoring + corroboration
+POST /api/verification/claims/{id}/verify/
+CanonicalClaim + Flashcard only when SUPPORTED
+ConceptAssignmentService
+verification tests for supported vs contradicted
 ```
 
-Planned status states:
+Pipeline gap:
 
 ```text
-UPLOADED
-PROCESSING
-OCR_DONE
-CLAIMS_EXTRACTED
-VERIFIED
-FAILED
+Upload processing currently stops at CLAIMS_EXTRACTED.
+It does not call verify_claim on each extracted claim.
+VERIFIED job status is defined but not reached by the orchestrator.
 ```
 
-Current verification rule:
+## Learning
+
+Implemented:
 
 ```text
-CanonicalClaim should be created only after an ExtractedClaim is verified as supported.
-Flashcards should be generated from CanonicalClaim, not raw notes or unsupported extracted claims.
+FlashcardGenerationService from CanonicalClaim (placeholder copy)
+Flashcard.source_claim → CanonicalClaim
+Feed/detail include canonical text, concept, evidence provenance
+Playlists + PlaylistItems (default playlist name "Saved")
+POST/DELETE /api/learning/flashcards/{id}/save/ writes playlist items, not SavedFlashcard
+GET/POST /api/learning/playlists/
+GET/PATCH/DELETE /api/learning/playlists/{id}/
+Feedback, progress summary, view_count on detail
+GET /api/learning/canonical-claims/{id}/explain/ (placeholder text + evidence)
+learning/tests.py for feed, detail, playlist save, permissions
 ```
 
-Recent test-related corrections:
+Product rules already decided, not fully modeled:
 
 ```text
-Use update_fields, not update_field, when saving a model with selected fields.
-Use the actual ExtractedClaim note field name consistently, currently reviewed_notes if the model has that field.
+Public environment: flashcards from shared canonical knowledge (current feed).
+Personal environment: flashcards derived from that user's notes (not implemented).
+Save/unsave is playlist membership.
+```
+
+Still needed:
+
+```text
+environment/owner fields on Flashcard
+GET personal feed
+LLM-written cards
+Understood/mastery endpoint
+Swipe sequences
+```
+
+## Infra And Local Dev
+
+Implemented:
+
+```text
+backend/.env.example + copy to .env
+settings load backend/.env
+docker-compose.yml: Postgres 16 + optional backend container
+GitHub Actions: tests on Postgres 16, flake8, Docker build, Render deploy hook on main
+Render hosts the deployed backend
+```
+
+Local run rule:
+
+```text
+Option A: docker compose up db -d, then venv + runserver (recommended).
+Option B: docker compose up for the API container.
+Do not run both (port 8000 clash).
+Compose backend does not read backend/.env unless env_file is added.
+```
+
+Secrets:
+
+```text
+Local .env is gitignored.
+Team Gemini/Google/Azure *dev* keys live in a password manager vault.
+Render environment tab holds production secrets.
 ```
 
 ## Tests
 
-Current test coverage has started for:
+Covered:
 
 ```text
-auth registration/login
-note upload
-note list permission gating
-verification service behavior
-canonical claim creation
-flashcard generation from verified claims
+users: register, login tokens
+notes: upload, gated list
+verification: supported → canonical + flashcard; contradicted → none
+learning: generator provenance, feed, detail progress, playlist save/unsave, foreign playlist 404, feedback, progress counts
 ```
 
-Known test direction:
+Empty or thin:
 
 ```text
-Keep tests aligned with real URLs.
-Prefer fixing project wiring over weakening tests.
-Do not rely on manually created profiles in tests now that the user profile signal exists.
-Run python manage.py test before committing backend behavior changes.
+knowledge/tests.py
+Google auth / complete-profile tests
+Note processing integration tests
 ```
 
-## Local Development Notes
+Run:
 
-Use `curl.exe` in PowerShell, not `curl`, because PowerShell aliases `curl` to `Invoke-WebRequest`.
-
-Correct:
-
-```powershell
-curl.exe -X GET "http://127.0.0.1:8000/api/learning/flashcards/" `
-  -H "Authorization: Bearer $token"
+```text
+cd backend
+python manage.py test
 ```
 
-Incorrect:
-
-```powershell
-curl -X GET "[http://127.0.0.1:8000/api/learning/flashcards/](http://127.0.0.1:8000/api/learning/flashcards/)"
-```
-
-Do not paste Markdown link syntax into terminal commands.
+CI runs the same command with DATABASE_URL pointing at the Actions Postgres service.
 
 ## Git Hygiene
 
@@ -294,5 +280,5 @@ source files
 migrations
 requirements.txt
 .env.example
-docs
+docs (including docs/tasks.md)
 ```

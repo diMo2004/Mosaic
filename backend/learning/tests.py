@@ -14,7 +14,11 @@ from learning.services import FlashcardGenerationService
 class FlashcardAPITests(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="learner", password="pass12345")
+        self.user.profile.profile_completed = True
+        self.user.profile.save()
         self.other = User.objects.create_user(username="other", password="pass12345")
+        self.other.profile.profile_completed = True
+        self.other.profile.save()
         self.concept = Concept.objects.create(name="BFS", slug="bfs")
         self.source = Source.objects.create(
             name="Test Source",

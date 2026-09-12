@@ -4,7 +4,7 @@ This document explains how MOSAIC is currently being built. It is intended for t
 
 ## Product Definition
 
-MOSAIC is a personal knowledge engine. It accepts user-uploaded learning material, extracts claims, verifies them against evidence, stores corrected/canonical knowledge, and uses that knowledge to teach through flashcards and explanations.
+MOSAIC is a personal knowledge engine. First users are CSE students. It accepts user-uploaded learning material, extracts claims, verifies them against evidence, stores corrected/canonical knowledge, and teaches through flashcards (public shared feed today; personal note-derived feed later) and explanations.
 
 The core loop is:
 
@@ -39,29 +39,26 @@ This separation is important for correctness, privacy, attribution, future rewar
 
 ## Repository Shape
 
-The project is being built as a monorepo:
-
 ```text
 Mosaic/
   backend/      Django + DRF API
-  mobile/       React Native + Expo app, later/currently planned
-  docs/         architecture, decisions, roadmap, team context
-  infra/        Docker/deployment, later/currently planned
-  .github/      CI/CD, later/currently planned
+  docs/         architecture, decisions, roadmap, tasks, CSE taxonomy
+  docker-compose.yml
+  backend/Dockerfile
+  .github/workflows/ci-cd.yml
+  mobile/       not created yet (Expo planned)
 ```
 
 ## Backend Stack
 
-Current backend direction:
-
 ```text
-Django
-Django REST Framework
-SimpleJWT
-SQLite for local development
-PostgreSQL planned
-pgvector planned later
-Celery + Redis planned later
+Django + DRF + SimpleJWT
+Local: SQLite or Docker Postgres 16
+CI and Render: PostgreSQL
+pgvector later
+Celery + Redis later
+OCR: Gemini + Azure fallback
+LLM: Gemini for extraction/assignment
 ```
 
 DRF is used because the frontend/mobile app will consume JSON APIs. JWT is used because the app is mobile/API-first rather than a traditional cookie-session website.
@@ -146,10 +143,12 @@ SourceDocument
 ExtractedClaim
 Evidence
 Concept
+ConceptRelationship
+UnmappedConceptReview
 CanonicalClaim
 ```
 
-Evidence should verify extracted claims. Flashcards should be generated from canonical claims, not directly from raw uploaded notes.
+Evidence verifies extracted claims (`related_name=evidence_items`). Flashcards point at canonical claims. Concepts are assigned through `ConceptAssignmentService` (NetworkX 1-hop + Gemini, unmapped review in admin).
 
 ### verification
 
@@ -164,7 +163,7 @@ Verification service
 Placeholder processing task during MVP wiring
 ```
 
-The planned pipeline status values are:
+Pipeline status values (on both `Note` and `NoteProcessingJob`):
 
 ```text
 UPLOADED
@@ -175,21 +174,24 @@ VERIFIED
 FAILED
 ```
 
-The `Note` model may keep a summary status, while `NoteProcessingJob` keeps the actual processing workflow record.
+`Note` holds summary status and `extracted_text`. `NoteProcessingJob` is the workflow record.
+
+Upload currently runs `process_note_placeholder` **synchronously** in the request. Orchestration stops after claim extraction; verification is a separate `POST /api/verification/claims/{id}/verify/`.
 
 ### learning
 
 Responsible for:
 
 ```text
-Flashcard API
-Flashcard details
-Saved flashcards
+Flashcard API (public canonical feed)
+Provenance: Flashcard → CanonicalClaim → ExtractedClaim → Evidence → Source
+Playlists (default "Saved" + named lists)
 Flashcard feedback
-Basic user progress
+User progress (view counts)
+Placeholder grounded explanation
 ```
 
-Current intended endpoints:
+Endpoints:
 
 ```text
 GET    /api/learning/flashcards/
@@ -197,8 +199,16 @@ GET    /api/learning/flashcards/{id}/
 POST   /api/learning/flashcards/{id}/save/
 DELETE /api/learning/flashcards/{id}/save/
 POST   /api/learning/flashcards/{id}/feedback/
+GET    /api/learning/playlists/
+POST   /api/learning/playlists/
+GET    /api/learning/playlists/{id}/
+PATCH  /api/learning/playlists/{id}/
+DELETE /api/learning/playlists/{id}/
 GET    /api/learning/progress/
+GET    /api/learning/canonical-claims/{id}/explain/
 ```
+
+Save writes `PlaylistItem`. Personal-environment feed is not implemented.
 
 ## Auth Architecture
 
@@ -230,8 +240,8 @@ Current access design:
 ```text
 Authenticated users:
 - can upload notes
-- can view flashcards
-- can save flashcards
+- can view public flashcards
+- can save flashcards into playlists
 - can submit feedback
 - can view their own progress
 
@@ -274,13 +284,18 @@ Claim extraction service
 -> returns atomic claims
 ```
 
-Suggested service layout:
+Current service layout:
 
 ```text
 verification/services/ocr/base.py
-verification/services/ocr/gemini.py
-verification/services/ocr/azure.py
+verification/services/ocr/factory.py   (HybridOCRProvider, Gemini + Azure)
+verification/services/ocr/placeholder.py
 verification/services/claim_extraction.py
+verification/services/note_processing.py
+verification/services/claim_verification.py
+verification/services/concept_assignment.py
+verification/services/evidence_retrieval.py
+verification/tasks.py                  (process_note_placeholder, still in-process)
 ```
 
 The pipeline should call an interface, not a provider directly:
@@ -300,6 +315,7 @@ Use `/api/` for all app APIs:
 /api/auth/
 /api/notes/
 /api/knowledge/
+/api/verification/
 /api/learning/
 ```
 

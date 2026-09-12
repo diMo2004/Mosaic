@@ -21,7 +21,6 @@ Thumbs.db
 .idea/
 
 #docs
-docs/tasks.md
 
 # Gunicorn runtime files (created by Docker volume mount on Windows)
 .gunicorn/

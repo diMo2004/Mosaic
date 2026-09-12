@@ -20,10 +20,16 @@ class NotePermissionTests(APITestCase):
             username='testuser',
             password='testpassword123',
         )
+        self.user.profile.profile_completed = True
+        self.user.profile.save()
+
         self.other_user = User.objects.create_user(
             username='otheruser',
             password='testpassword123',
         )
+
+        self.other_user.profile.profile_completed = True
+        self.other_user.profile.save()
 
     def test_authenticated_user_can_upload_note(self):
         self.client.force_authenticate(user=self.user)

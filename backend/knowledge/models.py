@@ -25,12 +25,6 @@ class Source(models.Model):
         choices=SOURCE_TYPES_CHOICES,
         default=SOURCE_TYPE_OTHER,
     )
-    access_method = models.CharField(max_length=255, blank=True)
-    source_type = models.CharField(
-        max_length=30,
-        choices=SOURCE_TYPES_CHOICES,
-        default=SOURCE_TYPE_OTHER,
-    )
     access_method = models.CharField(max_length=100, blank=True)
     license = models.CharField(max_length=255, blank=True)
     license_url = models.URLField(blank=True)

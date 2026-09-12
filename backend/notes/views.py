@@ -5,10 +5,11 @@ from rest_framework import generics, permissions
 from .models import Note
 from .serializers import NoteDetailSerializer, NoteUploadSerializer
 from .permissions import CanViewOwnNotes
+from users.permissions import IsProfileComplete
 
 class NoteUploadView(generics.CreateAPIView):
     serializer_class = NoteUploadSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsProfileComplete]
 
     def perform_create(self, serializer):
         uploaded_file = self.request.FILES.get('file')
@@ -24,14 +25,14 @@ class NoteUploadView(generics.CreateAPIView):
 
 class NoteListView(generics.ListAPIView):
     serializer_class = NoteDetailSerializer
-    permission_classes = [permissions.IsAuthenticated, CanViewOwnNotes]
+    permission_classes = [permissions.IsAuthenticated, IsProfileComplete, CanViewOwnNotes]
 
     def get_queryset(self):
         return Note.objects.filter(owner=self.request.user)
 
 class NoteDetailView(generics.RetrieveAPIView):
     serializer_class = NoteDetailSerializer
-    permission_classes = [permissions.IsAuthenticated, CanViewOwnNotes]
+    permission_classes = [permissions.IsAuthenticated, IsProfileComplete, CanViewOwnNotes]
 
     def get_queryset(self):
         return Note.objects.filter(owner=self.request.user)

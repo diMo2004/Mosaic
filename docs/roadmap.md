@@ -1,369 +1,170 @@
 # MOSAIC Roadmap
 
-This roadmap separates current work from future work so the team and coding agents can stay focused.
+This roadmap separates current work from future work so the team stays focused.
 
 ## Current Work
 
-The project is currently building the backend MVP foundation.
-
-The immediate goal is:
+Backend categories 0–7 are largely done. Immediate focus:
 
 ```text
-Authenticated users can enter the app, upload notes, and consume basic flashcards.
-The backend has the data model foundation for source documents, extracted claims, evidence, canonical claims, and processing jobs.
-The backend has a basic test suite that protects auth, notes, permissions, and verification behavior.
+Close remaining pipeline gaps (verify after extraction, profile-complete gate, Source model cleanup).
+Start Category 8: Expo mobile MVP against the existing APIs.
+Keep CI green on main.
 ```
 
-## Current Backend Milestone
+Do not start recommendations, social, Celery, or microservices until the mobile vertical slice works.
 
-Finish and stabilize:
+## Audience And Product Split
 
 ```text
-users
-notes
-knowledge
-verification
-learning
+First users: CSE students.
+Public feed: flashcards from shared canonical knowledge (implemented).
+Personal environment: cards from the user's own verified notes (not implemented).
+Note library list/detail: gated on can_view_own_notes until a later reward system.
+Save: playlists, not a flat saved-flag table.
 ```
 
-### Users
+## App Status
 
-Current/foundation work:
+### Users — mostly done
+
+Done: register, login, JWT refresh, UserProfile signal, Google auth, complete-profile endpoint.
+
+Next:
 
 ```text
-Email/password registration
-Email/password login
-JWT refresh
-UserProfile
-UserProfile auto-create signal
-Google sign-in
-Mandatory immediate profile completion
+Enforce IsProfileComplete on app APIs
+Google + profile screens on mobile
 ```
 
-Do next:
+### Notes — pipeline wired, still synchronous
+
+Done: upload, owner, gated list/detail, job after upload, in-process OCR + claim extraction.
+
+Next:
 
 ```text
-Confirm UserProfile fields
-Add Google auth endpoint if not complete
-Add profile completion endpoint
-Keep auth tests passing against /api/auth/ routes
+Call verification from NoteProcessingService
+Celery later
+Stronger file validation
 ```
 
-### Notes
+### Knowledge — models and admin in place
 
-Current/foundation work:
+Done: source/evidence/claim/concept/canonical APIs and admin; CSE taxonomy + NetworkX assignment.
+
+Next:
 
 ```text
-Authenticated upload
-File metadata
-Upload validation
-Owner tracking
-Premium/contributor-gated note list/detail
-Tests for upload and note-library permission behavior
+Deduplicate Source fields
+Edges when approving UnmappedConceptReview
+knowledge tests
 ```
 
-Do next:
+### Verification — service done, orchestrator incomplete
+
+Done: scoring verifier, placeholder evidence, verify endpoint, concept assignment.
+
+Next:
 
 ```text
-Improve file validation
-Create NoteProcessingJob automatically after upload
-Trigger placeholder processing task
-Prepare for async processing
+After claims_extracted, verify each claim and set job VERIFIED
+Human review queue UX (admin exists; no dedicated API)
 ```
 
-### Knowledge
+### Learning — category 7 done
 
-Current/foundation work:
+Done: generate from canonical, provenance on API, feed/detail/feedback/progress, playlists.
+
+Next:
 
 ```text
-Source registry
-SourceDocument
-ExtractedClaim
-Evidence model/API
-Concept
-CanonicalClaim
-Admin review tools
+Personal vs public flashcard environments
+Understood action
+Real LLM explanation
+Mobile feed + playlist UI
 ```
 
-Do next:
+## Sprint Status
+
+### Sprints 1–4 (backend foundation through verification/flashcards)
+
+Treat as **done enough to build mobile**, except:
 
 ```text
-Clean up old/duplicate Claim model usage
-Ensure Evidence points to ExtractedClaim
-Ensure reverse relation names are consistent
-Ensure Flashcard points to CanonicalClaim
+Note job does not auto-verify
+Profile completion is not enforced on APIs
+Source model still has duplicated field declarations
 ```
 
-### Verification
-
-Current/foundation work:
+### Sprint 5: Mobile MVP Shell — next
 
 ```text
-verification app exists
-claim verification service started
-verification tests started
-prompt templates started
-processing model/service needs completion
-```
-
-Do next:
-
-```text
-Add NoteProcessingJob
-Add placeholder processing task
-Create source document from uploaded note
-Create placeholder extracted claim
-Update job/note statuses during processing
-Finish evidence retrieval placeholder
-Improve confidence scoring with source authority and evidence relevance
-Ensure CanonicalClaim is created only for supported claims
-```
-
-### Learning
-
-Current/foundation work:
-
-```text
-Flashcard feed/detail
-Save/unsave flashcard
-Feedback endpoint
-Basic progress summary
-Admin tools
-Flashcard generation from CanonicalClaim started/planned through verification service
-```
-
-Do next:
-
-```text
-Fix small typos/field mismatches as found
-Ensure save/detail/progress work using same user token
-Add "understood" or mastery action endpoint later
-Ensure flashcards link to CanonicalClaim
-Add grounded explanation endpoint using CanonicalClaim plus supporting Evidence
-```
-
-## Near-Term Sprint Plan
-
-### Sprint 1: Stabilize Backend Foundation
-
-Deliver:
-
-```text
-Auth works
-Notes upload works
-Flashcard feed/detail/save/feedback/progress works
-Source/evidence admin/API works
-Initial backend tests exist and pass
-Clean migrations
-No generated files in Git
-```
-
-Definition of done:
-
-```text
-All migrations run cleanly
-Admin opens without errors
-curl.exe tests pass
-python manage.py test passes
-Normal user cannot view gated note library
-Eligible user can view only their own notes
-```
-
-### Sprint 2: Pipeline Wiring
-
-Deliver:
-
-```text
-Note upload creates processing job
-Placeholder task creates SourceDocument
-Placeholder task creates ExtractedClaim
-Statuses update correctly
-Admin can inspect processing jobs and claims
-```
-
-Definition of done:
-
-```text
-Upload note
-Run placeholder processor
-See SourceDocument
-See ExtractedClaim
-See NoteProcessingJob status
-```
-
-### Sprint 3: OCR And Claim Extraction
-
-Deliver:
-
-```text
-OCR provider selected
-OCR interface added
-One provider implemented
-Claim extraction service added
-Extracted claims stored from real uploaded content
-```
-
-Research required before implementation:
-
-```text
-Compare Gemini document processing, Azure Document Intelligence, Amazon Textract, and OpenAI vision/document extraction.
-Score on handwriting quality, PDF/image support, cost, API simplicity, output structure, latency, and privacy/data terms.
-```
-
-### Sprint 4: Verification MVP
-
-Deliver:
-
-```text
-Evidence retrieval placeholder
-Manual/admin evidence attachment
-Verification status updates
-CanonicalClaim creation from supported/corrected extracted claims
-Flashcard generation from canonical claims
-Grounded explanation endpoint
-```
-
-Definition of done:
-
-```text
-ExtractedClaim can become supported/contradicted/uncertain.
-Supported/corrected knowledge can become CanonicalClaim.
-Flashcard can be linked to CanonicalClaim.
-Explanation endpoint returns canonical claim plus supporting evidence.
-```
-
-### Sprint 5: Mobile MVP Shell
-
-Deliver:
-
-```text
-Expo app scaffold
-Auth screens
-Google sign-in screen
+Expo scaffold
+Auth screens (email + Google)
 Mandatory profile form
-Flashcard feed
-Flashcard detail
-Save/feedback actions
-Upload note screen
+Flashcard feed + detail
+Playlist save/unsave + feedback
+Upload note + processing status
 ```
 
 Definition of done:
 
 ```text
-Mobile app can login, fetch flashcards, save a card, submit feedback, upload a note.
+Mobile can login, complete profile, fetch public flashcards, save to playlist,
+submit feedback, upload a note, and see processing status.
 ```
 
-## Future Work
-
-These should not distract from the current backend foundation.
-
-### Production Storage
-
-Later:
+### Sprint 6: Personal environment + pipeline closeout
 
 ```text
-S3 or S3-compatible object storage
-private file access
-signed URLs
-file deletion lifecycle
+Flashcard.environment = public | personal
+Personal feed from the user's verified notes
+Note processing runs verification and can reach VERIFIED
+IsProfileComplete on APIs
 ```
 
-### Background Jobs
+## Future Work (unchanged intent, updated order)
 
-Later:
+Do these only after Sprint 5–6.
+
+### Real RAG
 
 ```text
-Celery
-Redis
-retry policy
-dead-letter/failure handling
-worker monitoring
+Embeddings + pgvector
+Retrieve canonical claims + evidence
+LLM explanation with citations
 ```
 
-### PostgreSQL And pgvector
-
-Later:
+### Production jobs and storage
 
 ```text
-Move from SQLite to PostgreSQL
-Add pgvector
-Store embeddings
-Add vector retrieval
+Celery + Redis
+S3/R2 for media
+Retry / dead-letter / worker monitoring
 ```
 
-### RAG Explanation
+Production **hosting** (Render + GitHub Actions) is already in place; this section is workers and object storage, not “first deploy.”
 
-Later:
+### External ingestion
 
 ```text
-Retrieve canonical claims
-Retrieve evidence
-Generate grounded explanation
-Return citations/provenance
+Source adapters (GitHub, official docs, Stack Exchange, arXiv)
+License/policy registry enforcement
+Reddit only as community evidence after legal review
 ```
 
-### Recommendation System
-
-Later:
+### Recommendations, mastery, contributors
 
 ```text
-Topic-based recommendations
-Saved concepts
-Difficulty
-Prerequisites
-User mastery
-Learning history
+Topic / prerequisite / history recommendations
+Understood + concept mastery
+Contributor scores; can_view_own_notes from rewards
 ```
 
-### Reward And Contributor System
-
-Later:
+### Social and scale
 
 ```text
-reward points
-contributor status
-premium eligibility
-upload quality scoring
-accepted-claim percentage
-source/evidence contribution score
+Friends, chat, comments, sharing — later only
+OpenSearch, graph DB, microservices — only if Postgres + NetworkX is not enough
 ```
-
-This system can eventually control:
-
-```text
-can_view_own_notes
-advanced contribution tools
-review privileges
-premium features
-```
-
-### Social Features
-
-Later only:
-
-```text
-friends
-chat
-comments
-likes
-sharing
-community contributions
-reputation
-```
-
-Do not build social features before the knowledge pipeline works.
-
-### Scale Architecture
-
-Later only:
-
-```text
-OpenSearch/Elasticsearch
-dedicated graph database
-microservices
-source partnerships
-licensed external corpora
-advanced monitoring
-```
-
-The MVP should remain a modular monolith.

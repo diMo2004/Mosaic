@@ -9,6 +9,7 @@ from unittest.mock import patch, MagicMock
 #CanonicalClaim is created only for supported claims
 #Flashcard is created only from CanonicalClaim
 
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.contrib.auth.models import User
 from django.test import TestCase
 from knowledge.models import (
@@ -20,7 +21,71 @@ from knowledge.models import (
     SourceDocument,
 )
 from learning.models import Flashcard
+from notes.models import Note
+from verification.models import NoteProcessingJob
+from verification.services.note_processing import NoteProcessingService
 from verification.services.claim_verification import ClaimVerificationService
+
+class NoteProcessJobIntegrationTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="testuser")
+        self.note = Note.objects.create(
+            owner=self.user,
+            title="Data Structures Lecture Notes",
+            file=SimpleUploadedFile("lecture.txt", b"Binary search operates on sorted arrays."),
+        )
+
+    @patch("verification.services.note_processing.HybridOCRProvider")
+    @patch("verification.services.note_processing.ClaimExtractionService")
+    @patch("verification.services.concept_assignment.ConceptAssignmentService")
+    def test_processing_pipeline_completes_and_verifies(self, MockConceptService, MockClaimExtractor, MockOCRProvider):
+        mock_ocr = MagicMock()
+        mock_ocr.extract_text.return_value = "Binary search operates on sorted arrays in O(log n)."
+        MockOCRProvider.return_value = mock_ocr
+
+        mock_extractor = MagicMock()
+        mock_extractor.extract_claims.return_value = [
+            "Binary search operates on sorted arrays.",
+        ]
+        MockClaimExtractor.return_value = mock_extractor
+
+        mock_concept_inst = MagicMock()
+        mock_concept_inst.assign_concept.return_value = Concept.objects.create(
+            name="Algorithms", slug="algorithms"
+            )
+        MockConceptService.return_value = mock_concept_inst
+
+        job = NoteProcessingService().process(self.note.id)
+        self.note.refresh_from_db()
+        job.refresh_from_db()
+
+        self.assertEqual(job.status, NoteProcessingJob.STATUS_VERIFIED)
+        self.assertIsNotNone(job.completed_at)
+        self.assertEqual(self.note.status, Note.STATUS_VERIFIED)
+        self.assertEqual(self.note.extracted_text, "Binary search operates on sorted arrays in O(log n).")
+
+        self.assertEqual(self.note.source_documents.count(), 1)
+        doc = self.note.source_documents.first()
+        self.assertEqual(doc.extracted_claims.count(), 1)
+        claim = doc.extracted_claims.first()
+        self.assertIn(claim.status, [ExtractedClaim.STATUS_SUPPORTED, ExtractedClaim.STATUS_UNCERTAIN])
+
+    @patch("verification.services.note_processing.HybridOCRProvider")
+    def test_processing_failure_records_error_and_status(self, MockOCRProvider):
+        mock_ocr = MagicMock()
+        mock_ocr.extract_text.side_effect = Exception("OCR connection timeout")
+        MockOCRProvider.return_value = mock_ocr
+
+        job = NoteProcessingService().process(self.note.id)
+        self.note.refresh_from_db()
+        job.refresh_from_db()
+
+        self.assertEqual(job.status, NoteProcessingJob.STATUS_FAILED)
+        self.assertIn("OCR connection timeout", job.error_message)
+        self.assertIsNotNone(job.completed_at)
+        self.assertEqual(self.note.status, Note.STATUS_FAILED)
+        self.assertIn("OCR connection timeout", self.note.processing_error)
+
 
 class ClaimVerificationServiceTests(TestCase):
     def setUp(self):

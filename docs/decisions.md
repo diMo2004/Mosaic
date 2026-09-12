@@ -260,3 +260,89 @@ Do not write tests against older or imagined routes such as `/api/users/login/` 
 ## 19. Prefer Fixing Wiring Over Weakening Tests
 
 When tests reveal missing signals, route mismatches, model field typos, or service keyword typos, fix the application wiring. Do not remove important tests just to make the suite pass.
+
+## 20. First Users Are CSE Students
+
+Content, taxonomy seeding, and early sources should target computer-science education first.
+
+## 21. Public Canonical Feed vs Personal Note Environment
+
+Flashcards generated from shared canonical knowledge are a **public** environment visible to all authenticated users.
+
+Flashcards derived from a user's own notes are a **personal** environment. They are not the same feed. Personal environment is decided but not implemented yet.
+
+## 22. Save And Unsave Belong To Playlists
+
+Do not treat save as a single global flag table as the product behavior.
+
+```text
+POST/DELETE /api/learning/flashcards/{id}/save/  → PlaylistItem
+default playlist name: Saved
+optional playlist_id on save; optional playlist_id on unsave
+```
+
+A user may have additional named playlists. Default playlist must not be deleted.
+
+## 23. Note Library Stays Gated Until Rewards
+
+`can_view_own_notes` remains a manual/admin flag until the contributor/reward system exists. Upload stays open to every authenticated user.
+
+## 24. Concept Graph Lives In Postgres; NetworkX Is A Cache
+
+Do not add Neo4j/Neptune in the MVP.
+
+```text
+Concept + ConceptRelationship = source of truth
+get_cached_nx_graph() = read cache for assignment
+invalidate_cached_graph() after taxonomy writes
+```
+
+Unmapped terms become `UnmappedConceptReview`, not auto-created official concepts.
+
+## 25. OCR Providers
+
+OCR and claim extraction stay separate interfaces.
+
+Current implementation direction:
+
+```text
+HybridOCRProvider: Gemini vision first, Azure Document Intelligence on quota/failure
+placeholder when keys are missing
+OCR_PROVIDER and GEMINI_*/AZURE_* env vars
+```
+
+Do not hardcode a single vendor in views.
+
+## 26. Local Database
+
+SQLite is still valid if `DATABASE_ENGINE` is not `postgres` and `DATABASE_URL` is empty.
+
+Recommended teammate setup: Docker Compose **db** service (Postgres 16) + venv `runserver`. Production/CI use Postgres. Do not introduce a second graph database.
+
+## 27. CI/CD And Hosting
+
+```text
+GitHub Actions: python manage.py test against Postgres 16, flake8, Docker build
+Push to main: Render deploy hook
+```
+
+CI must not require a real GEMINI_API_KEY. Tests mock or use placeholders.
+
+## 28. Secrets
+
+```text
+backend/.env          gitignored, per laptop
+backend/.env.example  committed template
+password manager       shared *dev* Gemini/Google/Azure keys
+Render env tab         production secrets only
+```
+
+Never copy production `DATABASE_URL` or `SECRET_KEY` onto laptops.
+
+## 29. One Process On Port 8000
+
+`docker compose up` (backend service) and `python manage.py runserver` both bind 8000. Document Option A (db only + runserver) vs Option B (compose API). Do not run both.
+
+## 30. Grounded Explanation Stays Placeholder Until RAG
+
+`GET /api/learning/canonical-claims/{id}/explain/` may return canonical text + evidence without an LLM. Do not pretend that is full RAG.
