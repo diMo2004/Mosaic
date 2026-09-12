@@ -1,8 +1,6 @@
 import os
 from dotenv import load_dotenv
 import dj_database_url
-
-load_dotenv()
 """
 Django settings for config project.
 
@@ -19,28 +17,44 @@ from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / '.env')  # Load environment variables from .env file
+
+def env(name, default=""):
+    value = os.getenv(name)
+    if value is None or not str(value).strip():
+        return default
+    return value.strip()
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv("SECRET_KEY", "unsafe-dev-secret-key")
+SECRET_KEY = env("SECRET_KEY", "unsafe-dev-secret-key-change-me-at-least-32-characters")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv("DEBUG", "False") == "True"
+DEBUG = env("DEBUG", "False") == "True"
 
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",")
+ALLOWED_HOSTS = [
+    host.strip() 
+    for host in env("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+    if host.strip()
+]
+NOTE_UPLOAD_MAX_SIZE = int(env("NOTE_UPLOAD_MAX_SIZE", str(10 * 1024 * 1024)))  # Default to 10 MB
+NOTE_UPLOAD_ALLOWED_CONTENT_TYPES = [
+    content_type.strip()
+    for content_type in env(
+        "NOTE_UPLOAD_ALLOWED_CONTENT_TYPES", "application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png,text/plain,image/webp,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation",).split(",")
+    if content_type.strip()
+]
 
-NOTE_UPLOAD_MAX_SIZE = int(os.getenv("NOTE_UPLOAD_MAX_SIZE", 10 * 1024 * 1024))  # Default to 10 MB
-
-NOTE_UPLOAD_ALLOWED_CONTENT_TYPES = os.getenv(
-    "NOTE_UPLOAD_ALLOWED_CONTENT_TYPES", "application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png,text/plain,image/webp,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation",).split(",")
-
-OCR_PROVIDER =os.getenv("OCR_PROVIDER", "placeholder")  # Default to placeholder OCR provider
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")  # Default to empty string if not set
-AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT = os.getenv("AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT", "")
-AZURE_DOCUMENT_INTELLIGENCE_KEY = os.getenv("AZURE_DOCUMENT_INTELLIGENCE_KEY", "")
+OCR_PROVIDER =env("OCR_PROVIDER", "placeholder")  # Default to placeholder OCR provider
+GEMINI_API_KEY = env("GEMINI_API_KEY", "")  # Default to empty string if not set
+AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT = env("AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT", "")
+AZURE_DOCUMENT_INTELLIGENCE_KEY = env("AZURE_DOCUMENT_INTELLIGENCE_KEY", "")
+GEMINI_CLAIM_MODEL = env("GEMINI_CLAIM_MODEL", "gemini-3.6-flash")
+GEMINI_OCR_MODEL = env("GEMINI_OCR_MODEL", "gemini-3.6-flash")
+GOOGLE_OAUTH_CLIENT_ID = env("GOOGLE_OAUTH_CLIENT_ID", "")
 
 # Application definition
 
@@ -96,20 +110,20 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = env("DATABASE_URL")
 if DATABASE_URL:
     DATABASES = {
         'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)
     }
-elif os.getenv("DATABASE_ENGINE") == "postgres":
+elif env("DATABASE_ENGINE") == "postgres":
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.getenv("POSTGRES_DB"),
-            'USER': os.getenv("POSTGRES_USER"),
-            'PASSWORD': os.getenv("POSTGRES_PASSWORD"),
-            'HOST': os.getenv("POSTGRES_HOST", "localhost"),
-            'PORT': os.getenv("POSTGRES_PORT", "5432"),
+            'NAME': env("POSTGRES_DB"),
+            'USER': env("POSTGRES_USER"),
+            'PASSWORD': env("POSTGRES_PASSWORD"),
+            'HOST': env("POSTGRES_HOST", "localhost"),
+            'PORT': env("POSTGRES_PORT", "5432"),
         }
     }
 else:
@@ -185,7 +199,7 @@ REST_FRAMEWORK = {
 }
 
 CORS_ALLOWED_ORIGINS = [
-    origin for origin in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",") if origin.strip()
+    origin.strip() for origin in env("CORS_ALLOWED_ORIGINS", "").split(",") if origin.strip()
 ]
 
 MEDIA_URL = '/media/'

@@ -4,6 +4,154 @@
 
 ---
 
+# Local Development Setup
+
+This section is for teammates cloning the repo. Production environment variables stay on Render. Do not copy Render `SECRET_KEY` or `DATABASE_URL` onto a laptop.
+
+## Prerequisites
+
+Install:
+
+- Python 3.13 (any 3.13.x is fine; “Add python.exe to PATH” during install)
+- Git
+- Docker Desktop (must be running if you use Postgres via Compose)
+
+Administrator PowerShell is **not** required for clone or install.
+
+If PowerShell blocks venv activation:
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+```
+
+### IDE (Cursor / VS Code)
+
+- Encoding UTF-8 (status bar, bottom right)
+- `Ctrl+Shift+P` → **Python: Select Interpreter** → `Mosaic\backend\.venv313\Scripts\python.exe`
+
+## Clone
+
+```powershell
+git clone https://github.com/diMo2004/Mosaic.git
+cd Mosaic\backend
+```
+
+## Python virtual environment
+
+```powershell
+py -3.13 -m venv .venv313
+.\.venv313\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+`pip install` is once per venv. The prompt must show `(.venv313)` before `pip` or `manage.py`.
+
+## Environment file
+
+```powershell
+copy .env.example .env
+```
+
+Then edit `backend/.env`:
+
+- Set `SECRET_KEY` to a random string at least 32 characters
+- Leave `OCR_PROVIDER=placeholder` unless you need real OCR/LLM
+- Paste `GEMINI_API_KEY`, `GOOGLE_OAUTH_CLIENT_ID`, and Azure keys from the team password manager if you need those APIs
+- Never commit `.env`
+
+For local Postgres matching Docker Compose, `.env` should include:
+
+```text
+DATABASE_ENGINE=postgres
+POSTGRES_DB=mosaic_db
+POSTGRES_USER=mosaic_user
+POSTGRES_PASSWORD=mosaic_password
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+```
+
+## Sharing API keys (password manager)
+
+Do not send keys in chat, Discord, or the repo.
+
+1. Create a team vault/collection named **Mosaic – local dev** (separate from production).
+2. Invite teammates to that collection only.
+3. Store one item per service:
+
+| Item | Fields |
+|---|---|
+| Mosaic Gemini (dev) | `GEMINI_API_KEY` |
+| Mosaic Google OAuth (dev) | `GOOGLE_OAUTH_CLIENT_ID` (and client secret if you have one) |
+| Mosaic Azure DI (dev) | `AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT`, `AZURE_DOCUMENT_INTELLIGENCE_KEY` |
+
+4. Each person copies values into their local `.env`.
+5. Rotate keys and revoke vault access when someone leaves.
+
+Production Gemini/Google/Azure values stay on the Render Environment tab only.
+
+## Choose one way to run (not both)
+
+`docker compose up` starts Postgres **and** the API on port **8000**. `python manage.py runserver` also uses **8000**. Do not run both.
+
+### Option A — recommended (edit and run Django on the machine)
+
+From the **repo root** (`Mosaic`), start only the database:
+
+```powershell
+docker compose up db -d
+```
+
+From `Mosaic\backend` with the venv active:
+
+```powershell
+python manage.py migrate
+python manage.py createsuperuser
+python manage.py runserver
+```
+
+Admin: http://127.0.0.1:8000/admin/
+
+Later DB start: `docker compose up db -d`. Stop API with Ctrl+C. Stop DB with `docker compose stop db` from the repo root.
+
+### Option B — Docker only
+
+From the **repo root**:
+
+```powershell
+docker compose up --build
+```
+
+Later (no image rebuild):
+
+```powershell
+docker compose up -d
+```
+
+Do **not** also run `runserver`. The container does not load `backend/.env` unless `env_file` is added to `docker-compose.yml`. Gemini/Google/Azure in `.env` apply to Option A only.
+
+Rebuild images only when `Dockerfile` or `docker-compose.yml` changes: `docker compose up --build`.
+
+## Django superuser
+
+Use the **same** `.venv313` and `backend` folder, after `migrate`. Do not create a second virtual environment.
+
+```powershell
+python manage.py createsuperuser
+```
+
+Then sign in at http://127.0.0.1:8000/admin/
+
+## Checks and shutdown
+
+```powershell
+python manage.py test
+```
+
+- Stop `runserver`: Ctrl+C
+- Stop Compose: from repo root, `docker compose down` (add `-v` only if you also want to delete the Postgres volume)
+
+---
+
 ## 1. Executive Summary
 
 MOSAIC is envisioned as a learning and knowledge platform built around a central idea:
