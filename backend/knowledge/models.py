@@ -50,6 +50,18 @@ class Source(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    @property
+    def is_ai_usable(self) -> bool:
+        """Determines if content from this source can be fed to external LLMs"""
+        return bool(self.ai_use_allowed or self.source_type == self.SOURCE_TYPE_USER)
+
+    @property
+    def can_redistribute(self) -> bool:
+        """Determines if derived excerpts/flashcards can be shared publicly."""
+        if self.source_type == self.SOURCE_TYPE_OFFICIAL:
+            return True
+        return bool(self.commercial_use_allowed or "cc" in (self.license or "").lower())
+
     class Meta:
         ordering = ['name']
 

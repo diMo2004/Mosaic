@@ -139,6 +139,10 @@ class UnmappedConceptReviewAdmin(admin.ModelAdmin):
     @admin.action(description="Approve selected terms and add them to official Concept taxonomy")
     def approve_and_add_to_graph(self, request, queryset):
         approved_count = 0
+        root_cse, _ = Concept.objects.get_or_create(
+            name="Computer Science & Engineering",
+            defaults={"slug": "cse"}
+        )
         for item in queryset.filter(status=UnmappedConceptReview.STATUS_PENDING):
             concept, _ = Concept.objects.get_or_create(
                 slug=slugify(item.suggested_name),
@@ -147,9 +151,20 @@ class UnmappedConceptReviewAdmin(admin.ModelAdmin):
                     "description": f"Approved from context: {item.context_text[:100]}",
                 }
             )
+            parent_concept = root_cse
+            if item.context_claim and hasattr(item.context_claim, 'canonical_claim'):
+                canonical = item.context_claim.canonical_claims.first()
+                if canonical and canonical.concept:
+                    parent_concept = canonical.concept
+
+            ConceptRelationship.objects.get_or_create(
+                from_concept=concept,
+                to_concept=parent_concept,
+                relation_type=ConceptRelationship.RELATION_PARENT,
+            )
             item.status = UnmappedConceptReview.STATUS_APPROVED
             item.reviewed_by = request.user
-            item.resolution_notes = f"Approved and added to Concept ID {concept.id}."
+            item.resolution_notes = f"Approved as Concept #{concept.id}, parented under '{parent_concept.name}'."
             item.save()
             approved_count += 1
 

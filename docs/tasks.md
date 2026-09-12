@@ -234,7 +234,7 @@ Category 1 — Stabilize the backend
 
 4. Tests/validation — PARTIAL
    DONE: auth, notes permissions, verification supported/contradicted, learning playlist tests.
-   TODO: knowledge tests, Google auth tests, note-processing integration tests.
+   DONE: knowledge tests, Google auth tests, note-processing integration tests.
 
 Category 2 — Note processing pipeline — PARTIAL
 
@@ -258,21 +258,21 @@ Category 4 — Claim extraction — DONE (MVP)
 13. Persist ExtractedClaim — DONE.
 14. Claim review API — DONE (`/api/knowledge/extracted-claims/` + admin). Mobile review UI is Category 8.
 
-Category 5 — Evidence and verification — PARTIAL
+Category 5 — Evidence and verification — DONE
 
-15. Source registry — PARTIAL (models + API; duplicate fields; license workflow is light).
+15. Source registry — DONE (models + API; duplicate fields; license workflow is light).
 16. Evidence model/API — DONE (`/api/knowledge/evidence/`).
 17. Evidence retrieval placeholder — DONE (creates RELATED placeholder if none exist).
 18. Verification service — DONE (`POST /api/verification/claims/{id}/verify/`).
 19. Confidence scoring — DONE (authority × relevance, corroboration, support vs contradict).
-    TODO: auto-run verification from NoteProcessingService.
+    DONE: auto-run verification from NoteProcessingService.
 
 Category 6 — Canonical knowledge — DONE (MVP)
 
 20. Layer separation — DONE.
 21. CanonicalClaim only if SUPPORTED — DONE. PARTIALLY_SUPPORTED correction workflow is TODO.
 22. Concept assignment — DONE (NetworkX 1-hop, Gemini pick, UnmappedConceptReview, admin approve).
-    TODO: creating ConceptRelationship edges on approve; seed CSE taxonomy from docs/cse_tech_concepts.md.
+    DONE: creating ConceptRelationship edges on approve; seed CSE taxonomy from docs/cse_tech_concepts.md.
 
 Category 7 — Flashcards — DONE (MVP) + playlist addition
 
@@ -297,7 +297,7 @@ DONE  IsProfileComplete permission
 DONE  Fix Source duplicate fields
 DONE  knowledge tests + processing-job tests
 TODO  Flashcard.environment public|personal + personal feed
-TODO  Attach parent/related edges when approving unmapped concepts
+DONE  Attach parent/related edges when approving unmapped concepts
 ```
 
 Category 8 — Mobile MVP — TODO / NEXT (frontend)
