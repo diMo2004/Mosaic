@@ -302,7 +302,7 @@ DONE  Attach parent/related edges when approving unmapped concepts
 
 Category 8 — Mobile MVP — TODO / NEXT (frontend)
 
-26. Expo + TypeScript scaffold — TODO
+26. Expo + TypeScript scaffold — DONE
 27. Login, register, Google sign-in — TODO (backend google-auth exists)
 28. Mandatory profile completion screen — TODO
 29. Note upload — TODO
