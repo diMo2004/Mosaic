@@ -8,7 +8,7 @@
             "developmentClient": true,
             "distribution": "internal",
             "env": {
-                "EXPO_PUBLIC_API_URL": "http://10.0.2.2.8000"
+                "EXPO_PUBLIC_API_URL": "https://mosaic-backend-n8a9.onrender.com"
             }
         },
         "preview": {

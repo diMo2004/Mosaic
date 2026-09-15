@@ -2,18 +2,22 @@
 import axios, {AxiosError, InternalAxiosRequestConfig} from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
-const DEV_API_URL = 'http://10.0.2.2:8000'; //Android emulator localhost
-const PROD_API_URL = 'https://mosaic-backend-n8a9.onrender.com';
+const configuredApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
 
-export const BASE_URL = process.env.EXPO_BASE_URL || (__DEV__ ? DEV_API_URL : PROD_API_URL);
+if (!configuredApiUrl) {
+    throw new Error('EXPO_PUBLIC_API_URL is not configured');
+}
+
+export const BASE_URL = configuredApiUrl;
+console.log('[API] BASE_URL:', BASE_URL);
 
 export const apiClient = axios.create({
     baseURL: BASE_URL,
     headers: {
-        'Content-Type': 'applicaton/json',
+        'Content-Type': 'application/json',
         Accept: 'application/json',
     },
-    timeout: 15000,
+    timeout: 120000,
 });
 
 apiClient.interceptors.request.use(

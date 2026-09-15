@@ -300,19 +300,20 @@ TODO  Flashcard.environment public|personal + personal feed
 DONE  Attach parent/related edges when approving unmapped concepts
 ```
 
-Category 8 — Mobile MVP — TODO / NEXT (frontend)
+Category 8 — Mobile MVP — PARTIAL (frontend)
 
 26. Expo + TypeScript scaffold — DONE
-27. Login, register, Google sign-in — TODO (backend google-auth exists)
-28. Mandatory profile completion screen — TODO
-29. Note upload — TODO
-30. Processing-status screen (uploaded → failed) — TODO
-31. Claim review screen — TODO
-32. Public flashcard feed (swipe sequences later) — TODO
-33. Flashcard detail — TODO
-34. Playlist save/unsave + feedback — TODO (do not build a single "saved" flag UI)
-35. In-depth explanation screen (consume placeholder explain API) — TODO
-35a. Playlist list / named playlists UI — TODO
+27. Login, register, Google sign-in — PARTIAL (backend google-auth exists)
+28. Mandatory profile completion screen — DONE
+29. Note upload — DONE
+30. Processing-status screen (uploaded → failed) — DONE
+31. Claim review screen — DONE
+32. Public flashcard feed (swipe sequences later) — DONE
+33. Flashcard detail — DONE
+34. Playlist save/unsave + feedback — DONE (do not build a single "saved" flag UI)
+35. In-depth explanation screen (consume placeholder explain API) — DONE
+35a. Playlist list / named playlists UI — DONE
+35b. Styling of the UI for great UX - TODO
 
 Category 9 — Real RAG — TODO
 
