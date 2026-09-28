@@ -4,7 +4,7 @@ This roadmap separates current work from future work so the team stays focused.
 
 ## Current Work
 
-Backend categories 0–7 are largely done. Immediate focus:
+Backend categories 0–9 are largely done. Immediate focus:
 
 ```text
 Close remaining pipeline gaps (verify after extraction, profile-complete gate, Source model cleanup).
@@ -12,7 +12,9 @@ Start Category 8: Expo mobile MVP against the existing APIs.
 Keep CI green on main.
 ```
 
-Do not start recommendations, social, Celery, or microservices until the mobile vertical slice works.
+Do not start recommendations, social, or microservices until the mobile vertical slice works.
+Celery and Redis are now used for asynchronous evidence embedding; replacing the
+synchronous OCR pipeline with workers remains future work.
 
 ## Audience And Product Split
 
@@ -45,7 +47,7 @@ Next:
 
 ```text
 Call verification from NoteProcessingService
-Celery later
+Move OCR and note processing to Celery workers
 Stronger file validation
 ```
 
@@ -81,7 +83,7 @@ Next:
 ```text
 Personal vs public flashcard environments
 Understood action
-Real LLM explanation
+RAG explanation maintenance and source-quality improvements
 Mobile feed + playlist UI
 ```
 
@@ -124,24 +126,16 @@ Note processing runs verification and can reach VERIFIED
 IsProfileComplete on APIs
 ```
 
-## Future Work (unchanged intent, updated order)
+## Future Work (updated after Category 9)
 
-Do these only after Sprint 5–6.
-
-### Real RAG
-
-```text
-Embeddings + pgvector
-Retrieve canonical claims + evidence
-LLM explanation with citations
-```
+Do these only after Sprint 5–6 and the completed Category 9 RAG work.
 
 ### Production jobs and storage
 
 ```text
-Celery + Redis
-S3/R2 for media
+Move OCR and note processing to Celery workers
 Retry / dead-letter / worker monitoring
+S3/R2 for media
 ```
 
 Production **hosting** (Render + GitHub Actions) is already in place; this section is workers and object storage, not “first deploy.”

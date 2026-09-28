@@ -1,0 +1,1 @@
+{"nodes": [{"id": "mosaic_decisions", "label": "Architecture Decisions", "file_type": "document", "source_file": "docs/decisions.md", "rationale": "Records immutable design principles and trade-offs."}], "edges": [], "hyperedges": []}

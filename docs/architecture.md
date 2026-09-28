@@ -53,10 +53,10 @@ Mosaic/
 
 ```text
 Django + DRF + SimpleJWT
-Local: SQLite or Docker Postgres 16
+Local: SQLite for non-vector development or Docker Postgres 16 with pgvector
 CI and Render: PostgreSQL
-pgvector later
-Celery + Redis later
+pgvector for evidence embeddings and semantic retrieval
+Celery + Redis for asynchronous evidence embedding
 OCR: Gemini + Azure fallback
 LLM: Gemini for extraction/assignment
 ```
@@ -188,7 +188,7 @@ Provenance: Flashcard → CanonicalClaim → ExtractedClaim → Evidence → Sou
 Playlists (default "Saved" + named lists)
 Flashcard feedback
 User progress (view counts)
-Placeholder grounded explanation
+Citation-aware RAG explanation backed by semantically retrieved evidence
 ```
 
 Endpoints:
@@ -320,4 +320,3 @@ Use `/api/` for all app APIs:
 ```
 
 Use app-level `urls.py` files and include them in `config/urls.py`. Keep `config/urls.py` as the project router, not a place for all endpoint definitions.
-

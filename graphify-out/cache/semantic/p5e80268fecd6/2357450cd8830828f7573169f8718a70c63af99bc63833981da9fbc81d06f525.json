@@ -1,0 +1,1 @@
+{"nodes": [{"id": "github_actions_ci", "label": "Mosaic CI/CD Workflow", "file_type": "code", "source_file": ".github/workflows/ci-cd.yml", "rationale": "Automates testing, linting, and deployment to Render."}], "edges": [], "hyperedges": []}

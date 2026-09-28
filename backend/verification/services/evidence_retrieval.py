@@ -1,5 +1,6 @@
-from django.utils import timezone
 from knowledge.models import Evidence, Source
+from django.db import transaction
+from knowledge.tasks import embed_evidence_task
 
 class EvidenceRetrievalService:
     def retrieve_for_claim(self, extracted_claim):
@@ -23,6 +24,11 @@ class EvidenceRetrievalService:
             relevance_score=0.50,
         )
 
+        transaction.on_commit(
+            lambda evidence_id=evidence.id: embed_evidence_task.delay(
+                evidence_id,
+            )
+        )
         return [evidence]
 
     retrieve_evidence = retrieve_for_claim

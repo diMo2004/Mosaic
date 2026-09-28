@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APITestCase
+from unittest.mock import Mock, patch
 # Create your tests here.
 
 from knowledge.models import (
@@ -89,3 +90,79 @@ class KnowledgeAPIPermissionTests(APITestCase):
              format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+from knowledge.services.embeddings import (
+    EmbeddingService,
+    EmbeddingServiceError,
+)
+
+class EmbeddingServiceTests(TestCase):
+    def test_embed_text_rejects_empty_text(self):
+        service = object.__new__(EmbeddingService) 
+        with self.assertRaises(EmbeddingServiceError):
+            service.embed_text("")
+
+    def test_embed_text_returns_768_values(self):
+        provider_response = Mock()
+        provider_response.embeddings = [
+            Mock(values=[0.1] * EmbeddingService.DIMENSIONS)
+        ]
+
+        client = Mock()
+        client.models.embed_content.return_value = provider_response
+
+        with patch(
+            "knowledge.services.embeddings.genai.Client",
+            return_value=client,
+        ):
+            service = EmbeddingService()
+            vector = service.embed_text("BFS uses a queue.")
+        self.assertEqual(len(vector), EmbeddingService.DIMENSIONS)
+        client.models.embed_content.assert_called_once()
+
+    def test_embed_text_rejects_wrong_vector_dimensions(self):
+        provider_response = Mock()
+        provider_response.embeddings = [
+            Mock(values=[0.1] * 10)
+        ]
+
+        client = Mock()
+        client.models.embed_content.return_value = provider_response
+
+        with patch(
+            "knowledge.services.embeddings.genai.Client",
+            return_value=client,
+        ):
+            service = EmbeddingService()
+            with self.assertRaises(EmbeddingServiceError):
+                service.embed_text("BFS uses a queue.")
+
+    def test_embed_text_wraps_provider_failure(self):
+        client = Mock()
+        client.models.embed_content.side_effect = RuntimeError(
+            "provider unavailable"
+        )
+        with patch(
+            "knowledge.services.embeddings.genai.Client",
+            return_value=client,
+        ):
+            service = EmbeddingService()
+            with self.assertRaises(EmbeddingServiceError) as context:
+                service.embed_text("BFS uses a queue.")
+
+        self.assertEqual(
+            str(context.exception),
+            "Embedding provider request failed.",
+        )
+
+    def test_missing_api_key_is_rejected(self):
+        with patch(
+            "knowledge.services.embeddings.settings.GEMINI_API_KEY",
+            "",
+        ), patch.dict(
+            "os.environ",
+            {"GEMINI_API_KEY": ""},
+            clear=False,
+        ):
+            with self.assertRaises(EmbeddingServiceError):
+                EmbeddingService()

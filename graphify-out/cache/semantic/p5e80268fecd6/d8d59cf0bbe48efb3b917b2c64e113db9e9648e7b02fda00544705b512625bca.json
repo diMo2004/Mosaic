@@ -1,0 +1,1 @@
+{"nodes": [{"id": "mosaic_cse_taxonomy", "label": "CSE Technology & Concept Knowledge Graph", "file_type": "document", "source_file": "docs/cse_tech_concepts.md", "rationale": "Initial seed data for the canonical knowledge base."}], "edges": [], "hyperedges": []}

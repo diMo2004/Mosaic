@@ -8,6 +8,7 @@ from rest_framework.views import APIView
 from .models import Flashcard, FlashcardFeedback, Playlist, PlaylistItem, UserProgress
 from .serializers import FlashcardSerializer, FlashcardFeedbackSerializer, PlaylistDetailSerializer, PlaylistSerializer
 from knowledge.models import CanonicalClaim
+from .services.rag_explanation import RAGExplanationServiceError
 from users.permissions import IsProfileComplete
 # Create your views here.
 
@@ -173,10 +174,22 @@ class GroundedExplanationView(APIView):
             pk=pk,
             is_active=True,
         )
-        evidence_items = []
-        if canonical_claim.source_claim:
-            evidence_items = canonical_claim.source_claim.evidence_items.select_related('source').all()
 
+        from learning.services.rag_explanation import RAGExplanationService
+
+        try:
+            rag_service = RAGExplanationService()
+            result = rag_service.generate_explanation(canonical_claim)
+        except RAGExplanationServiceError as e:
+            return Response(
+                {
+                    "detail": (
+                        "A grounded explanation is temporarily unavailable."
+                    )
+                },
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        
         return Response(
             {
                 "canonical_claim": {
@@ -185,22 +198,41 @@ class GroundedExplanationView(APIView):
                     "text": canonical_claim.text,
                     "confidence": str(canonical_claim.confidence),
                 },
-                "explanation": (
-                    f"{canonical_claim.text}\n\n"
-                    "This explanation is grounded in the evidence listed below."
-                    "LLM-generated explanation will be added later."
-                ),
+                "explanation": result["explanation"],
                 "evidence": [
-                    {
-                        "source": evidence.source.name,
-                        "title": evidence.title,
-                        "url": evidence.url,
-                        "excerpt": evidence.excerpt,
-                        "relation": evidence.relation,
-                        "relevance_score": str(evidence.relevance_score),
-                    }
-                    for evidence in evidence_items
+                    self._serialize_evidence(
+                        evidence,
+                        citation_number=index,
+                    )
+                    for index, evidence in enumerate(
+                        result["evidence"], 
+                        start=1,
+                    )
                 ],
-            }
+            },
+            status=status.HTTP_200_OK,
         )
+
+    @staticmethod
+    def _serialize_evidence(evidence, *, citation_number: int) -> dict:
+        serialized = {
+            "citation": citation_number,
+            "id": evidence.id,
+            "source": (
+                evidence.source.name
+                if evidence.source_id
+                else "Unknown Source"
+            ),
+            "title": evidence.title,
+            "url": evidence.url,
+            "excerpt": evidence.excerpt,
+            "relation": evidence.relation,
+            "relevance_score": str(evidence.relevance_score)
+        }
+
+        distance = getattr(evidence, "distance", None)
+        if distance is not None:
+            serialized["distance"] = float(distance)
+
+        return serialized
     

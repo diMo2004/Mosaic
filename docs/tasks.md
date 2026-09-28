@@ -315,10 +315,11 @@ Category 8 — Mobile MVP — PARTIAL (frontend)
 35a. Playlist list / named playlists UI — DONE
 35b. Styling of the UI for great UX - TODO
 
-Category 9 — Real RAG — TODO
+Category 9 — Real RAG — DONE
 
-36–39: embeddings, pgvector, semantic retrieval, LLM explanation with citations.
-Current explain endpoint is not RAG.
+36–39: embeddings, pgvector, semantic retrieval, LLM explanation with citations — DONE.
+Evidence embeddings are generated asynchronously with Celery and Redis.
+The explain endpoint performs semantic retrieval and validates citations.
 
 Category 10 — External ingestion — TODO
 
@@ -338,7 +339,9 @@ Category 13 — Production workers and storage — PARTIAL
 
 Hosting is DONE (Render + GH Actions). Still TODO:
 54. S3/R2 for media
-55–57. Celery + Redis, retries, worker monitoring (replace in-process OCR)
+55–57. Move in-process OCR/note processing to Celery, add production retries and worker monitoring
+
+DONE: Celery + Redis asynchronous evidence embedding for Category 9.
 
 Category 14 — Scale — TODO
 
@@ -364,8 +367,8 @@ NEXT   C. Expo mobile against public feed + playlists + upload
 NEXT   D. Personal flashcard environment
 NEXT   E. Unmapped-concept edges + CSE taxonomy seed
 
-TODO   RAG / pgvector
-TODO   Celery + S3
+DONE   RAG / pgvector / citation-aware explanations
+PARTIAL Celery + S3 (evidence embedding worker done; OCR workers and S3 remain)
 TODO   External ingestion
 TODO   Recommendations / mastery / rewards
 TODO   Social / scale
@@ -380,9 +383,11 @@ Mobile (public feed + playlists)
       ↓
 Personal environment
       ↓
-pgvector/RAG
+pgvector/RAG (DONE)
       ↓
-Celery/S3
+Celery evidence embedding (DONE)
+      ↓
+OCR workers/S3
       ↓
 Recommendations/mastery
       ↓

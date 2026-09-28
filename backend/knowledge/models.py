@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from pgvector.django import VectorField
 # Create your models here.
 
 class Source(models.Model):
@@ -239,6 +240,7 @@ class Evidence(models.Model):
         decimal_places=2,
         default=0.00,
     )
+    embedding = VectorField(dimensions=768, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

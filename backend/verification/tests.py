@@ -1,4 +1,4 @@
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from unittest.mock import patch, MagicMock
 
 # Create your tests here.
@@ -12,6 +12,7 @@ from unittest.mock import patch, MagicMock
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.contrib.auth.models import User
 from django.test import TestCase
+from knowledge.services.evidence_retrieval import EvidenceRetrievalService
 from knowledge.models import (
     CanonicalClaim,
     Concept,
@@ -25,7 +26,7 @@ from notes.models import Note
 from verification.models import NoteProcessingJob
 from verification.services.note_processing import NoteProcessingService
 from verification.services.claim_verification import ClaimVerificationService
-
+from knowledge.tasks import embed_evidence_task
 class NoteProcessJobIntegrationTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="testuser")
@@ -149,3 +150,50 @@ class ClaimVerificationServiceTests(TestCase):
         self.assertIsNone(result["canonical_claim"])
         self.assertEqual(CanonicalClaim.objects.count(), 0)
         self.assertEqual(Flashcard.objects.count(), 0)
+
+@override_settings(
+    CELERY_TASK_ALWAYS_EAGER=True,
+    CELERY_TASK_EAGER_PROPAGATES=True,
+)
+@patch("knowledge.tasks.EmbeddingService")
+def test_embedding_task_stores_vector(
+    self,
+    embedding_service_class,
+):
+    embedding_service_class.return_value.embed_text.return_value = (
+        [0.1] * 768 
+    )
+
+    result = embed_evidence_task.delay(self.evidence.id)
+    self.evidence.refresh_from_db()
+    self.assertEqual(result.get()["status"], "embedded")
+    self.assertIsNotNone(self.evidence.embedding)
+    embedding_service_class.return_value.embed_text.assert_called_once()
+
+@override_settings(
+    CELERY_TASK_ALWAYS_EAGER=True,
+    CELERY_TASK_EAGER_PROPAGATES=True,
+)
+@patch("knowledge.tasks.EmbeddingService")
+def test_embedding_task_skips_existing_embedding(
+    self,
+    embedding_service_class,
+):
+    self.evidence.embedding = [0.1] * 768
+    self.evidence.save(update_fields=["embedding", "updated_at"])
+
+    result = embed_evidence_task.delay(self.evidence.id)
+
+    self.assertEqual(
+        result.get()["status"],
+        "already_embedded",
+    )
+    embedding_service_class.assert_not_called()
+
+@patch("verification.services.evidence_retrieval.embed_evidence_task.delay")
+def test_placeholder_evidence_queues_embedding_after_commit(self, delay_mock,):
+    evidence = EvidenceRetrievalService().retrieve_for_claim(
+        self.extracted_claim
+    )[0]
+
+    delay_mock.assert_called_once_with(evidence.id)

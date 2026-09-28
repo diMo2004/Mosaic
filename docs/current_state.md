@@ -4,7 +4,7 @@ This document describes where MOSAIC currently stands. Update it after each mean
 
 ## Project Status
 
-The backend MVP through **flashcards (tasks category 7)** is largely implemented. Category 8 (mobile) has not started. Production-shaped infrastructure exists for **local Docker Postgres**, **GitHub Actions CI**, and **Render deploy**, but Celery, S3, and pgvector are still future work.
+The backend MVP through **flashcards (tasks category 7)** is largely implemented. Category 8 (mobile) is partially implemented, and Category 9 (Real RAG) is complete. Production-shaped infrastructure exists for **local Docker Postgres**, **pgvector**, **Celery/Redis evidence embedding**, **GitHub Actions CI**, and **Render deploy**. OCR/note-processing workers and S3/R2 remain future work.
 
 First product audience: **CSE students**.
 
@@ -27,7 +27,8 @@ CanonicalClaim + Flashcard only for SUPPORTED claims
 Concept assignment via Postgres taxonomy + NetworkX 1-hop cache
 Flashcard APIs: feed, detail, playlist save/unsave, feedback, progress
 Playlist list/create/detail
-Placeholder grounded explanation endpoint
+Citation-aware RAG explanation endpoint using semantic evidence retrieval
+Asynchronous evidence embedding with Celery and Redis
 Learning + verification tests
 CI (pytest-equivalent: python manage.py test) + Docker image build + Render hook
 README local-setup section
@@ -36,12 +37,13 @@ README local-setup section
 Not started or incomplete:
 
 ```text
-Expo / mobile app
+Expo / mobile app (partially implemented)
 IsProfileComplete enforced on app APIs
 Auto-verify claims at the end of note processing (job often stops at CLAIMS_EXTRACTED)
 Personal vs public flashcard environments
-LLM flashcard copy and real RAG explanations
-Celery/Redis, S3, pgvector
+LLM flashcard copy
+S3/R2 media storage
+Celery workers for OCR/note processing, production retries, and monitoring
 External source ingestion (GitHub, MDN, etc.)
 Recommendations, mastery, contributor rewards, social
 ```
@@ -102,7 +104,7 @@ Still needed:
 
 ```text
 Hardening file validation
-Async workers (Celery) instead of blocking the upload request
+Async OCR/note-processing workers (Celery) instead of blocking the upload request
 Wire verification into the processing job so status can become VERIFIED
 Fix NoteProcessingJob.failed_at if the fail path still writes a field that is not on the model
 ```
@@ -181,8 +183,18 @@ POST/DELETE /api/learning/flashcards/{id}/save/ writes playlist items, not Saved
 GET/POST /api/learning/playlists/
 GET/PATCH/DELETE /api/learning/playlists/{id}/
 Feedback, progress summary, view_count on detail
-GET /api/learning/canonical-claims/{id}/explain/ (placeholder text + evidence)
+GET /api/learning/canonical-claims/{id}/explain/ (semantic evidence retrieval + citation-validated Gemini explanation)
 learning/tests.py for feed, detail, playlist save, permissions
+```
+
+RAG implementation:
+
+```text
+Evidence.embedding is a 768-dimensional pgvector field.
+EmbeddingService uses Gemini gemini-embedding-001 with output_dimensionality=768.
+EvidenceRetrievalService performs cosine-distance semantic search.
+RAGExplanationService builds grounded prompts from canonical claim text and evidence.
+Citations are validated and provider/retrieval failures return controlled errors.
 ```
 
 Product rules already decided, not fully modeled:
@@ -213,6 +225,8 @@ settings load backend/.env
 docker-compose.yml: Postgres 16 + optional backend container
 GitHub Actions: tests on Postgres 16, flake8, Docker build, Render deploy hook on main
 Render hosts the deployed backend
+Celery + Redis configuration and asynchronous evidence embedding task
+PostgreSQL pgvector migration for evidence embeddings
 ```
 
 Local run rule:
@@ -223,6 +237,16 @@ Option B: docker compose up for the API container.
 Do not run both (port 8000 clash).
 Compose backend does not read backend/.env unless env_file is added.
 ```
+
+Celery local development:
+
+```text
+Worker: python -m celery -A config worker --loglevel=INFO --pool=solo
+Broker: redis://127.0.0.1:6379/0
+Results: redis://127.0.0.1:6379/1
+```
+
+Celery currently handles evidence embedding only. OCR and note processing remain synchronous.
 
 Secrets:
 
@@ -240,7 +264,8 @@ Covered:
 users: register, login tokens
 notes: upload, gated list
 verification: supported → canonical + flashcard; contradicted → none
-learning: generator provenance, feed, detail progress, playlist save/unsave, foreign playlist 404, feedback, progress counts
+learning: generator provenance, feed, detail progress, playlist save/unsave, foreign playlist 404, feedback, progress counts, RAG citations and provider failures
+RAG: embedding validation, semantic retrieval, citation validation, API serialization, controlled failures
 ```
 
 Empty or thin:

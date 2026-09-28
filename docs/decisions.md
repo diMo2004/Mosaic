@@ -80,7 +80,10 @@ Do not split into microservices during the MVP.
 
 SQLite is acceptable for early local development.
 
-The intended production database is PostgreSQL. pgvector should be introduced later when embeddings/vector search become necessary.
+The intended production database is PostgreSQL. pgvector was introduced when
+embeddings and vector search became necessary for Category 9. Local SQLite remains
+valid for non-vector development, while RAG and vector retrieval require PostgreSQL
+with the pgvector extension.
 
 Do not introduce a separate graph database in the MVP.
 
@@ -346,3 +349,9 @@ Never copy production `DATABASE_URL` or `SECRET_KEY` onto laptops.
 ## 30. Grounded Explanation Stays Placeholder Until RAG
 
 `GET /api/learning/canonical-claims/{id}/explain/` may return canonical text + evidence without an LLM. Do not pretend that is full RAG.
+
+Category 9 has now replaced the placeholder behavior with semantic evidence
+retrieval through pgvector and citation-aware Gemini explanations. Evidence
+embeddings are generated asynchronously through Celery and Redis. The historical
+decision remains here to document the behavior that was prohibited before RAG
+was implemented.

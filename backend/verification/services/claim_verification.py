@@ -3,7 +3,7 @@ from django.db import transaction
 from django.utils import timezone
 from knowledge.models import CanonicalClaim, ExtractedClaim, Concept, Evidence
 from .evidence_retrieval import EvidenceRetrievalService
-from learning.services import FlashcardGenerationService
+from learning.services.flashcard_service import FlashcardGenerationService
 
 class ClaimVerificationService:
     def __init__(self):
