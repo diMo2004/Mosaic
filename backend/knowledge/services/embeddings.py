@@ -16,7 +16,7 @@ class EmbeddingService:
         self.model_name = getattr(
             settings, 
             "GEMINI_EMBEDDING_MODEL", 
-            "text-embedding-004",
+            "gemini-embedding-001",
         )
 
     def embed_text(self, text: str) -> list[float]:
