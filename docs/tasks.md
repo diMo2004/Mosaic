@@ -323,29 +323,38 @@ The explain endpoint performs semantic retrieval and validates citations.
 
 Category 10 — External ingestion — Done
 
-40–43: adapters (GitHub, Stack Exchange, arXiv, Wikimedia), license checks, pipeline.
+40–43: adapters (GitHub, Stack Exchange, arXiv, Wikimedia), license checks, pipeline — DONE.
 Reddit: evidence only, after legal review. Prefer official CSE/docs sources first.
 
 Category 11 — Recommendations — TODO
 
 44–48 after mobile + personal feed exist. Can use ConceptRelationship (prerequisite/related) later.
 
-Category 12 — Mastery and contributors — TODO
+Category 12 — Mastery and badges — PARTIAL
 
 49. Understood action (UserProgress.understood exists; no endpoint) — TODO
-50–53. Concept mastery, history, scoring, rewards that set can_view_own_notes.
+50. Concept Mastery Progression — DONE:
+    - Tiered Card View Quotas: Easy 20% (cap 15), Moderate 35% (cap 30), Intermediate 50% (cap 50), Advanced 65% (cap 75), Expert 80% (cap 100).
+    - Ratchet Rule: Monotonic non-decreasing progression. Unlocked tiers remain permanently unlocked regardless of future card ingestion.
+    - 5 Difficulty Questionnaires: 10 MCQs each. Easy, Moderate, Intermediate pass at 8/10; Advanced, Expert pass at 5/10.
+    - Retake Deduplication: Retakes automatically exclude questions previously asked to that user on that concept.
+    - Expert Mode: Zero process-of-elimination scope; subtle technical distractors.
+    - Concept MasteryBadge awarded upon passing all 5 tiers.
+51. Superset Mastery — DONE:
+    - Automatically awarded when 10 subtopics (or all child subtopics if < 10) are mastered.
+    - Note access (can_view_own_notes) remains decoupled from badge awards.
 
 Category 13 — Production workers and storage — PARTIAL
 
 Hosting is DONE (Render + GH Actions). Still TODO:
-54. S3/R2 for media
-55–57. Move in-process OCR/note processing to Celery, add production retries and worker monitoring
+52. S3/R2 for media
+53–55. Move in-process OCR/note processing to Celery, add production retries and worker monitoring
 
 DONE: Celery + Redis asynchronous evidence embedding for Category 9.
 
 Category 14 — Scale — TODO
 
-58–62. OpenSearch, dedicated graph DB only if NetworkX+Postgres fails, microservices, partnerships, observability.
+56–60. OpenSearch, dedicated graph DB only if NetworkX+Postgres fails, microservices, partnerships, observability.
 
 Category 15 — Social — TODO (do not start)
 
@@ -369,8 +378,8 @@ NEXT   E. Unmapped-concept edges + CSE taxonomy seed
 
 DONE   RAG / pgvector / citation-aware explanations
 PARTIAL Celery + S3 (evidence embedding worker done; OCR workers and S3 remain)
-TODO   External ingestion
-TODO   Recommendations / mastery / rewards
+DONE   External ingestion
+PARTIAL Mastery badges (DONE) / Recommendations (TODO)
 TODO   Social / scale
 ```
 

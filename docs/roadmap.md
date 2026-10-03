@@ -140,20 +140,22 @@ S3/R2 for media
 
 Production **hosting** (Render + GitHub Actions) is already in place; this section is workers and object storage, not “first deploy.”
 
-### External ingestion
+### External ingestion — completed (Category 10)
 
 ```text
-Source adapters (GitHub, official docs, Stack Exchange, arXiv)
+Source adapters (GitHub, official docs, Stack Exchange, arXiv, Wikimedia)
 License/policy registry enforcement
-Reddit only as community evidence after legal review
+Reddit restricted to community evidence after legal review
 ```
 
-### Recommendations, mastery, contributors
+### Recommendations, mastery badges (implemented), contributors
 
 ```text
 Topic / prerequisite / history recommendations
-Understood + concept mastery
-Contributor scores; can_view_own_notes from rewards
+Understood + 5-tier concept mastery questionnaires (Easy to Expert)
+Capped percentage flashcard view prerequisites with ratchet non-regression rule
+Concept MasteryBadges and Superset MasteryBadges (10 subtopics)
+Contributor scores (can_view_own_notes remains decoupled from badges)
 ```
 
 ### Social and scale

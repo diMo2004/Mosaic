@@ -355,3 +355,16 @@ retrieval through pgvector and citation-aware Gemini explanations. Evidence
 embeddings are generated asynchronously through Celery and Redis. The historical
 decision remains here to document the behavior that was prohibited before RAG
 was implemented.
+
+## 31. Concept & Superset Mastery Rewards (Ratchet & Percentage Scale)
+
+Mastery is assessed through progressive, tiered MCQ questionnaires:
+- Flashcard viewing prerequisite scales dynamically per tier:
+  `min(Cap, ceil(Total_Cards * Percentage))`, spanning from 20% (cap 15) to 80% (cap 100).
+- Ratchet Mechanism: Unlocked tiers never regress or lock a user out when external ingestion or note uploads add new cards to the concept.
+- 5 Tiered Questionnaires (10 MCQs each): Easy/Moderate/Intermediate pass at 8/10; Advanced/Expert pass at 5/10.
+- Retakes: Immediate retakes are permitted; questions previously asked to that user on that concept are excluded.
+- Expert mode features subtle technical distractors eliminating process-of-elimination guessing.
+- Subtopic mastery awards a Concept MasteryBadge.
+- Superset MasteryBadge requires completing 10 subtopics (or all child subtopics if the parent concept has fewer than 10).
+- `can_view_own_notes` is decoupled from mastery awards.

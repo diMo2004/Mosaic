@@ -4,7 +4,7 @@ This document describes where MOSAIC currently stands. Update it after each mean
 
 ## Project Status
 
-The backend MVP through **flashcards (tasks category 7)** is largely implemented. Category 8 (mobile) is partially implemented, and Category 9 (Real RAG) is complete. Production-shaped infrastructure exists for **local Docker Postgres**, **pgvector**, **Celery/Redis evidence embedding**, **GitHub Actions CI**, and **Render deploy**. OCR/note-processing workers and S3/R2 remain future work.
+The backend MVP through **flashcards (tasks category 7)** is largely implemented. Category 8 (mobile) is partially implemented, Category 9 (Real RAG) is complete, **Category 10 (External Ingestion)** is complete, and **Category 12 (Concept Mastery Badges & Questionnaire Engine)** is implemented. Production-shaped infrastructure exists for **local Docker Postgres**, **pgvector**, **Celery/Redis evidence embedding**, **GitHub Actions CI**, and **Render deploy**. OCR/note-processing workers and S3/R2 remain future work.
 
 First product audience: **CSE students**.
 
@@ -29,7 +29,12 @@ Flashcard APIs: feed, detail, playlist save/unsave, feedback, progress
 Playlist list/create/detail
 Citation-aware RAG explanation endpoint using semantic evidence retrieval
 Asynchronous evidence embedding with Celery and Redis
-Learning + verification tests
+External source ingestion (GitHub, arXiv, Wikimedia, StackExchange, Reddit)
+License and policy validation engine for external ingestion
+CLI management command: ingest_external
+Questionnaires & 5-tier MCQ engine (Easy to Expert) with dynamic capped quotas & ratchet rule
+Concept MasteryBadge & Superset MasteryBadge (10 subtopics) models and services
+Learning, verification, and ingestion tests
 CI (pytest-equivalent: python manage.py test) + Docker image build + Render hook
 README local-setup section
 ```
@@ -37,15 +42,15 @@ README local-setup section
 Not started or incomplete:
 
 ```text
-Expo / mobile app (partially implemented)
+Expo / mobile app (scaffold and screen shells exist; styling & full wiring in progress)
 IsProfileComplete enforced on app APIs
 Auto-verify claims at the end of note processing (job often stops at CLAIMS_EXTRACTED)
 Personal vs public flashcard environments
 LLM flashcard copy
 S3/R2 media storage
 Celery workers for OCR/note processing, production retries, and monitoring
-External source ingestion (GitHub, MDN, etc.)
-Recommendations, mastery, contributor rewards, social
+Understood action endpoint (task 49)
+Recommendations and social
 ```
 
 ## Authentication
@@ -136,12 +141,28 @@ Admin approve_and_add_to_graph creates a Concept and invalidates the cache.
 Approved concepts do not yet get parent/related edges automatically.
 ```
 
+External Ingestion (category 10):
+
+```text
+BaseExternalAdapter & IngestionItem DTO
+LicenseChecker policy enforcement (AI extraction rights, redistribution, scraping permissions)
+Reddit safety gate: strictly restricted to community evidence after legal review approval
+Adapters:
+  - GitHubAdapter (README/docs, auto license detection, rate-limit handling)
+  - ArxivAdapter (CS preprints, academic authority)
+  - WikimediaAdapter (Wikipedia CS definitions, CC-BY-SA 4.0)
+  - StackExchangeAdapter (Stack Overflow / CSE technical answers)
+  - RedditAdapter (Community discussion evidence only)
+ExternalIngestionPipeline: adapter -> license check -> SourceDocument -> ClaimExtraction -> Verification -> Canonical Knowledge / Evidence
+Management CLI: python manage.py ingest_external <adapter> <target>
+```
+
 Still needed:
 
 ```text
 Remove duplicated Source.source_type / access_method field declarations if still in models
 Attach taxonomy edges when approving unmapped concepts
-knowledge/tests.py is still empty
+Additional end-to-end integration tests for high-volume batch ingestion
 ```
 
 ## Verification
@@ -205,13 +226,27 @@ Personal environment: flashcards derived from that user's notes (not implemented
 Save/unsave is playlist membership.
 ```
 
+Mastery and Questionnaire engine (category 12 - implemented):
+
+```text
+Models: Questionnaire, QuestionnaireQuestion, MasteryBadge
+Dynamic Tier Quotas: Easy 20% (cap 15), Moderate 35% (cap 30), Intermediate 50% (cap 50), Advanced 65% (cap 75), Expert 80% (cap 100).
+Ratchet Rule: Monotonic non-decreasing progression. Unlocked tiers remain permanently unlocked.
+5 Difficulty Questionnaires: 10 MCQs each. Pass at 8/10 (Easy-Intermediate) and 5/10 (Advanced-Expert).
+Retakes exclude previously asked questions for that user.
+Expert mode features zero process-of-elimination scope with subtle technical distractors.
+Concept MasteryBadge awarded upon passing all 5 tiers.
+Superset MasteryBadge awarded when 10 subtopics (or all child subtopics if < 10) are mastered.
+Note access (can_view_own_notes) is decoupled from badge rewards.
+```
+
 Still needed:
 
 ```text
 environment/owner fields on Flashcard
 GET personal feed
 LLM-written cards
-Understood/mastery endpoint
+Understood action endpoint (task 49)
 Swipe sequences
 ```
 
@@ -266,6 +301,7 @@ notes: upload, gated list
 verification: supported → canonical + flashcard; contradicted → none
 learning: generator provenance, feed, detail progress, playlist save/unsave, foreign playlist 404, feedback, progress counts, RAG citations and provider failures
 RAG: embedding validation, semantic retrieval, citation validation, API serialization, controlled failures
+ingestion: policy & license enforcement, adapter integration, source document creation and claim extraction
 ```
 
 Empty or thin:

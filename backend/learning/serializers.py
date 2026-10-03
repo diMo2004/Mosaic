@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Flashcard, FlashcardFeedback, Playlist, PlaylistItem, UserProgress
+from .models import Flashcard, FlashcardFeedback, Playlist, PlaylistItem, UserProgress, MasteryBadge, Questionnaire, QuestionnaireQuestion
 
 class FlashcardSerializer(serializers.ModelSerializer):
     is_saved = serializers.SerializerMethodField()
@@ -160,3 +160,17 @@ class UserProgressSerializer(serializers.ModelSerializer):
             "understood",
             "understood_at",
         ]
+
+class QuestionnaireQuestionClientSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = QuestionnaireQuestion
+        fields = ["id", "prompt", "options"]
+class QuestionnaireQuestionReviewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = QuestionnaireQuestion
+        fields = ["id", "prompt", "options", "user_selected_index", "correct_option_index", "is_correct", "explanation"]
+class MasteryBadgeSerializer(serializers.ModelSerializer):
+    concept_name = serializers.CharField(source="concept.name", read_only=True)
+    class Meta:
+        model = MasteryBadge
+        fields = ["id", "concept", "concept_name", "is_superset", "completion_date", "difficulty_progression"]

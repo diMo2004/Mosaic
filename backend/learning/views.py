@@ -5,11 +5,12 @@ from django.utils import timezone
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .models import Flashcard, FlashcardFeedback, Playlist, PlaylistItem, UserProgress
-from .serializers import FlashcardSerializer, FlashcardFeedbackSerializer, PlaylistDetailSerializer, PlaylistSerializer
-from knowledge.models import CanonicalClaim
+from .models import Flashcard, FlashcardFeedback, Playlist, PlaylistItem, UserProgress, MasteryBadge, Questionnaire
+from .serializers import FlashcardSerializer, FlashcardFeedbackSerializer, PlaylistDetailSerializer, PlaylistSerializer, MasteryBadgeSerializer, QuestionnaireQuestionClientSerializer, QuestionnaireQuestionReviewSerializer
+from knowledge.models import CanonicalClaim, Concept
 from .services.rag_explanation import RAGExplanationServiceError
 from users.permissions import IsProfileComplete
+from .services.mastery_service import MasteryService
 # Create your views here.
 
 def active_flashcards():
@@ -235,4 +236,62 @@ class GroundedExplanationView(APIView):
             serialized["distance"] = float(distance)
 
         return serialized
-    
+
+
+class ConceptMasteryStatusView(APIView):
+    def get(self, request, pk):
+        try:
+            concept = Concept.objects.get(pk=pk)
+        except Concept.DoesNotExist:
+            return Response({"detail": "Concept not found"}, status=status.HTTP_404_NOT_FOUND)
+        service = MasteryService()
+        current_tier = service.get_user_current_tier(request.user, concept)
+        eligibility = service.check_eligibility_for_tier(
+            request.user, concept, min(current_tier, 5)
+        )
+        has_badge = MasteryBadge.objects.filter(user=request.user, concept=concept).exists()
+        return Response({
+            "concept_id": concept.id,
+            "concept_name": concept.name,
+            "current_tier": current_tier,
+            "eligibility": eligibility,
+            "is_mastered": has_badge,
+        })
+class StartQuestionnaireView(APIView):
+    def post(self, request, pk):
+        try:
+            concept = Concept.objects.get(pk=pk)
+        except Concept.DoesNotExist:
+            return Response({"detail": "Concept not found"}, status=status.HTTP_404_NOT_FOUND)
+        service = MasteryService()
+        try:
+            questionnaire = service.generate_questionnaire(request.user, concept)
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        questions = questionnaire.questions.all()
+        return Response({
+            "questionnaire_id": questionnaire.id,
+            "concept": concept.name,
+            "tier": questionnaire.tier,
+            "passing_threshold": questionnaire.passing_threshold,
+            "questions": QuestionnaireQuestionClientSerializer(questions, many=True).data,
+        })
+class SubmitQuestionnaireView(APIView):
+    def post(self, request, pk):
+        try:
+            questionnaire = Questionnaire.objects.get(pk=pk, user=request.user)
+        except Questionnaire.DoesNotExist:
+            return Response({"detail": "Questionnaire not found"}, status=status.HTTP_404_NOT_FOUND)
+        if questionnaire.status != Questionnaire.STATUS_IN_PROGRESS:
+            return Response({"detail": "Questionnaire already submitted"}, status=status.HTTP_400_BAD_REQUEST)
+        answers = request.data.get("answers", [])
+        service = MasteryService()
+        result = service.grade_questionnaire(questionnaire, answers)
+        result["review"] = QuestionnaireQuestionReviewSerializer(
+            questionnaire.questions.all(), many=True
+        ).data
+        return Response(result)
+class UserMasteryBadgesView(APIView):
+    def get(self, request):
+        badges = MasteryBadge.objects.filter(user=request.user).select_related("concept")
+        return Response(MasteryBadgeSerializer(badges, many=True).data)

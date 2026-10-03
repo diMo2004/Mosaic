@@ -189,6 +189,8 @@ Playlists (default "Saved" + named lists)
 Flashcard feedback
 User progress (view counts)
 Citation-aware RAG explanation backed by semantically retrieved evidence
+Questionnaires & Tiered MCQs (Easy, Moderate, Intermediate, Advanced, Expert)
+MasteryBadges (Concept & Superset)
 ```
 
 Endpoints:
@@ -206,6 +208,10 @@ PATCH  /api/learning/playlists/{id}/
 DELETE /api/learning/playlists/{id}/
 GET    /api/learning/progress/
 GET    /api/learning/canonical-claims/{id}/explain/
+GET    /api/learning/concepts/{id}/mastery-status/
+POST   /api/learning/concepts/{id}/questionnaires/start/
+POST   /api/learning/questionnaires/{id}/submit/
+GET    /api/learning/badges/
 ```
 
 Save writes `PlaylistItem`. Personal-environment feed is not implemented.
