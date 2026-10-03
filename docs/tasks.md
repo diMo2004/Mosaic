@@ -321,7 +321,7 @@ Category 9 — Real RAG — DONE
 Evidence embeddings are generated asynchronously with Celery and Redis.
 The explain endpoint performs semantic retrieval and validates citations.
 
-Category 10 — External ingestion — TODO
+Category 10 — External ingestion — Done
 
 40–43: adapters (GitHub, Stack Exchange, arXiv, Wikimedia), license checks, pipeline.
 Reddit: evidence only, after legal review. Prefer official CSE/docs sources first.
