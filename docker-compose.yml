@@ -43,5 +43,25 @@ services:
     volumes:
       - ./backend:/app
 
+  worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: mosaic-worker
+    command: celery -A config worker --loglevel=INFO --concurrency=2
+    restart: unless-stopped
+    environment:
+      - DEBUG=True
+      - SECRET_KEY=local-dev-secret-key
+      - DATABASE_URL=postgres://mosaic_user:mosaic_password@db:5432/mosaic_db
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - ./backend:/app
+
 volumes:
   postgres_data:

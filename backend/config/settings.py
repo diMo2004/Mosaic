@@ -185,14 +185,42 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STORAGES = {
-    "default": {
-        "BACKEND": "django.core.files.storage.FileSystemStorage",
-    },
-    "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-    },
-}
+# ==============================================================================
+# Storage Configuration (Task 52: S3 / Cloudflare R2 support)
+# ==============================================================================
+AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME", "")
+USE_S3 = env("USE_S3", "False") == "True" or bool(AWS_STORAGE_BUCKET_NAME)
+
+if USE_S3:
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3.S3Storage",
+            "OPTIONS": {
+                "access_key": env("AWS_ACCESS_KEY_ID"),
+                "secret_key": env("AWS_SECRET_ACCESS_KEY"),
+                "bucket_name": AWS_STORAGE_BUCKET_NAME,
+                "region_name": env("AWS_S3_REGION_NAME", "auto"),
+                # For Cloudflare R2: https://<account_id>.r2.cloudflarestorage.com
+                "endpoint_url": env("AWS_S3_ENDPOINT_URL", None),
+                "default_acl": None,  # R2 and modern S3 buckets disable ACLs
+                "file_overwrite": False,
+                "querystring_auth": True,  # Generates signed URLs for private note downloads
+                "querystring_expire": 3600,
+            },
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
+else:
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration

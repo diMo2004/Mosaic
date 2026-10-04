@@ -347,8 +347,8 @@ Category 12 — Mastery and badges — PARTIAL
 Category 13 — Production workers and storage — PARTIAL
 
 Hosting is DONE (Render + GH Actions). Still TODO:
-52. S3/R2 for media
-53–55. Move in-process OCR/note processing to Celery, add production retries and worker monitoring
+52. S3/R2 for media - PARTIAL
+53–55. Move in-process OCR/note processing to Celery, add production retries and worker monitoring - DONE
 
 DONE: Celery + Redis asynchronous evidence embedding for Category 9.
 

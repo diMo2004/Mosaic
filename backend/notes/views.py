@@ -1,8 +1,11 @@
 from django.shortcuts import render
+from django.db import transaction
 
 # Create your views here.
 from rest_framework import generics, permissions
 from .models import Note
+from verification.models import NoteProcessingJob
+from verification.tasks import process_note_task
 from .serializers import NoteDetailSerializer, NoteUploadSerializer
 from .permissions import CanViewOwnNotes
 from users.permissions import IsProfileComplete
@@ -13,16 +16,16 @@ class NoteUploadView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         uploaded_file = self.request.FILES.get('file')
-        note =serializer.save(
+        note = serializer.save(
             owner=self.request.user,
             original_filename=getattr(uploaded_file, 'name', ''),
             content_type=getattr(uploaded_file, 'content_type', ''),
-            file_size=getattr(uploaded_file, 'size', 0)
+            file_size=getattr(uploaded_file, 'size', 0),
+            status = Note.STATUS_UPLOADED,
         )
 
-        from verification.tasks import process_note_placeholder
-        process_note_placeholder(note.id)
-
+        NoteProcessingJob.objects.get_or_create(note=note)
+        transaction.on_commit(lambda: process_note_task.delay(note.id))
 class NoteListView(generics.ListAPIView):
     serializer_class = NoteDetailSerializer
     permission_classes = [permissions.IsAuthenticated, IsProfileComplete, CanViewOwnNotes]
