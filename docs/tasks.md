@@ -330,9 +330,9 @@ Category 11 — Recommendations — TODO
 
 44–48 after mobile + personal feed exist. Can use ConceptRelationship (prerequisite/related) later.
 
-Category 12 — Mastery and badges — PARTIAL
+Category 12 — Mastery and badges — DONE
 
-49. Understood action (UserProgress.understood exists; no endpoint) — TODO
+49. Understood action (POST /api/learning/flashcards/<id>/understood/) — DONE
 50. Concept Mastery Progression — DONE:
     - Tiered Card View Quotas: Easy 20% (cap 15), Moderate 35% (cap 30), Intermediate 50% (cap 50), Advanced 65% (cap 75), Expert 80% (cap 100).
     - Ratchet Rule: Monotonic non-decreasing progression. Unlocked tiers remain permanently unlocked regardless of future card ingestion.
@@ -352,9 +352,13 @@ Hosting is DONE (Render + GH Actions). Still TODO:
 
 DONE: Celery + Redis asynchronous evidence embedding for Category 9.
 
-Category 14 — Scale — TODO
-
-56–60. OpenSearch, dedicated graph DB only if NetworkX+Postgres fails, microservices, partnerships, observability.
+Category 14 — Scale — PARTIAL
+ 
+56. Search Scaling: pg_trgm GIN indexes and full-text search before external OpenSearch.
+57. Graph Scaling: Redis serialization cache for NetworkX graph before dedicated graph DB.
+58. Worker Segmentation: Dedicated Celery queues for heavy pipelines (ocr, embeddings, ingestion).
+59. Observability & Health Checks: /api/health/ for DB, Cache, and worker status.
+60. Scheduled External Ingestion: Celery Beat periodic batch ingestion during off-peak hours with Redis token-bucket per-domain rate limiting — PARTIAL
 
 Category 15 — Social — TODO (do not start)
 
@@ -379,8 +383,9 @@ NEXT   E. Unmapped-concept edges + CSE taxonomy seed
 DONE   RAG / pgvector / citation-aware explanations
 PARTIAL Celery + S3 (evidence embedding worker done; OCR workers and S3 remain)
 DONE   External ingestion
-PARTIAL Mastery badges (DONE) / Recommendations (TODO)
-TODO   Social / scale
+DONE   Mastery badges (Category 12 fully DONE)
+PARTIAL Scale (Category 14: task 60 scheduled ingestion + rate limiting)
+TODO   Recommendations / Social
 ```
 
 Order to keep:

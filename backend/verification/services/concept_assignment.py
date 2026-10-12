@@ -5,26 +5,22 @@ import networkx as nx
 from django.conf import settings
 from google import genai
 from knowledge.models import Concept, ConceptRelationship, UnmappedConceptReview
+import pickle
+from django.core.cache import cache
 
 _CACHED_GRAPH = None
 
 def get_cached_nx_graph():
-    """Builds and caches the NetworkX in-memory graph from PostgreSQL."""
-    global _CACHED_GRAPH
-    if _CACHED_GRAPH is None:
-        graph = nx.DiGraph()
-        for concept in Concept.objects.all():
-            graph.add_node(concept.id, name=concept.name, slug=concept.slug)
+    cached_bytes = cache.get("MOSAIC_NX_GRAPH_BYTES")
+    if cached_bytes:
+        return pickle.loads(cached_bytes)
 
-        for relationship in ConceptRelationship.objects.all():
-            graph.add_edge(relationship.from_concept.id, relationship.to_concept.id, type=relationship.relation_type)
-
-        _CACHED_GRAPH = graph
-    return _CACHED_GRAPH
+    G = nx.DiGraph()
+    cache.set("MOSAIC_NX_GRAPH_BYTES", pickle.dumps(G), timeout=86400)
+    return G
 
 def invalidate_cached_graph():
-    global _CACHED_GRAPH
-    _CACHED_GRAPH = None
+    cache.delete("MOSAIC_NX_GRAPH_BYTES")
 
 class ConceptAssignmentService:
     def __init__(self):

@@ -34,6 +34,7 @@ License and policy validation engine for external ingestion
 CLI management command: ingest_external
 Questionnaires & 5-tier MCQ engine (Easy to Expert) with dynamic capped quotas & ratchet rule
 Concept MasteryBadge & Superset MasteryBadge (10 subtopics) models and services
+Understood action endpoint (POST /api/learning/flashcards/<id>/understood/)
 Learning, verification, and ingestion tests
 CI (pytest-equivalent: python manage.py test) + Docker image build + Render hook
 README local-setup section
@@ -49,7 +50,7 @@ Personal vs public flashcard environments
 LLM flashcard copy
 S3/R2 media storage
 Celery workers for OCR/note processing, production retries, and monitoring
-Understood action endpoint (task 49)
+Scheduled batch external ingestion + Redis token-bucket domain rate limiting (task 60)
 Recommendations and social
 ```
 
@@ -204,6 +205,7 @@ POST/DELETE /api/learning/flashcards/{id}/save/ writes playlist items, not Saved
 GET/POST /api/learning/playlists/
 GET/PATCH/DELETE /api/learning/playlists/{id}/
 Feedback, progress summary, view_count on detail
+POST /api/learning/flashcards/{id}/understood/ (understood toggle)
 GET /api/learning/canonical-claims/{id}/explain/ (semantic evidence retrieval + citation-validated Gemini explanation)
 learning/tests.py for feed, detail, playlist save, permissions
 ```
@@ -246,7 +248,6 @@ Still needed:
 environment/owner fields on Flashcard
 GET personal feed
 LLM-written cards
-Understood action endpoint (task 49)
 Swipe sequences
 ```
 

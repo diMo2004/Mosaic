@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.contrib.postgres.indexes import GinIndex
 from pgvector.django import VectorField
 # Create your models here.
 
@@ -202,6 +203,11 @@ class CanonicalClaim(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        indexes = [
+            GinIndex(name='claim_text_trgm_idx', fields=['text'], opclasses=['gin_trgm_ops']),
+            ]
+        
     def __str__(self):
         return self.text[:80]
 

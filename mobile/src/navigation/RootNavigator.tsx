@@ -12,32 +12,40 @@ import ProcessingStatusScreen from '@/screens/ProcessingStatusScreen';
 import ClaimReviewScreen from '@/screens/ClaimReviewScreen';
 import PlaylistModal from '@/screens/PlaylistModal';
 import GroundedExplainScreen from '@/screens/GroundedExplainScreen';
+import NotesListScreen from '@/screens/NotesListScreen';
+import KnowledgeExplorerScreen from '@/screens/KnowledgeExplorerScreen';
+import ProgressScreen from '@/screens/ProgressScreen';
+import MasteryScreen from '@/screens/MasteryScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 function MainTabs() {
     return (
-    <Tab.Navigator>
-      <Tab.Screen name="Feed" component={FeedScreen} />
-      <Tab.Screen name="Upload" component={UploadNoteScreen} />
-      <Tab.Screen name="Playlists" component={PlaylistModal} />
-      <Tab.Screen name="Profile" component={CompleteProfileScreen} />
-    </Tab.Navigator>
-    )
+        <Tab.Navigator>
+            <Tab.Screen name="Feed" component={FeedScreen} />
+            <Tab.Screen name="Upload" component={UploadNoteScreen} />
+            <Tab.Screen name="Notes" component={NotesListScreen} />
+            <Tab.Screen name="Knowledge" component={KnowledgeExplorerScreen} />
+            <Tab.Screen name="Progress" component={ProgressScreen} />
+            <Tab.Screen name="Playlists" component={PlaylistModal} />
+            <Tab.Screen name="Profile" component={CompleteProfileScreen} />
+        </Tab.Navigator>
+    );
 }
 
 export default function RootNavigator() {
-  return (
-    <Stack.Navigator initialRouteName="Login">
-      <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="CompleteProfile" component={CompleteProfileScreen} />
-      <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
-      <Stack.Screen name="FlashcardDetail" component={FlashcardDetailScreen} />
-      <Stack.Screen name="ProcessingStatus" component={ProcessingStatusScreen} />
-      <Stack.Screen name="ClaimReview" component={ClaimReviewScreen} />
-      <Stack.Screen name="PlaylistModal" component={PlaylistModal} options={{ presentation: 'modal' }} />
-      <Stack.Screen name="GroundedExplain" component={GroundedExplainScreen} />
-    </Stack.Navigator>
-  );
+    return (
+        <Stack.Navigator initialRouteName="Login">
+            <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="CompleteProfile" component={CompleteProfileScreen} />
+            <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
+            <Stack.Screen name="FlashcardDetail" component={FlashcardDetailScreen} />
+            <Stack.Screen name="ProcessingStatus" component={ProcessingStatusScreen} />
+            <Stack.Screen name="ClaimReview" component={ClaimReviewScreen} />
+            <Stack.Screen name="PlaylistModal" component={PlaylistModal} options={{ presentation: 'modal' }} />
+            <Stack.Screen name="GroundedExplain" component={GroundedExplainScreen} />
+            <Stack.Screen name="Mastery" component={MasteryScreen} />
+        </Stack.Navigator>
+    );
 }

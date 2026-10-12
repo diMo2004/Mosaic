@@ -1,6 +1,7 @@
 from urllib import response
 
 from django.test import TestCase
+from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 from django.contrib.auth.models import User
@@ -120,6 +121,22 @@ class FlashcardAPITests(APITestCase):
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]["name"], "Saved")
         self.assertTrue(response.data[0]["is_default"])
+
+    def test_mark_flashcard_understood(self):
+        url = reverse("flashcard-understood", kwargs={"pk": self.flashcard.id})
+        response = self.client.post(url, {"understood": True})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["understood"])
+        summary_url = reverse("progress-summary")
+        summary_res = self.client.get(summary_url)
+        self.assertEqual(summary_res.data["understood_count"], 1)
+
+        response_unmark = self.client.post(url, {"understood": False})
+        self.assertEqual(response_unmark.status_code, status.HTTP_200_OK)
+        self.assertFalse(response_unmark.data["understood"])
+
+        summary_res2 = self.client.get(summary_url)
+        self.assertEqual(summary_res2.data["understood_count"], 0)
 
 from knowledge.services.evidence_retrieval import (
     EvidenceRetrievalError,
@@ -348,6 +365,7 @@ class RAGExplanationServiceTests(APITestCase):
         with self.assertRaises(RAGExplanationServiceError):
             service.generate_explanation(self.canonical_claim)
 
+    @patch("learning.services.rag_explanation.logger")
     def test_provider_failure_is_wrapped(self):
         client = FakeExplanationClient(
             error=RuntimeError("provider unavailable"),

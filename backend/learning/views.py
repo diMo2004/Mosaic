@@ -295,3 +295,34 @@ class UserMasteryBadgesView(APIView):
     def get(self, request):
         badges = MasteryBadge.objects.filter(user=request.user).select_related("concept")
         return Response(MasteryBadgeSerializer(badges, many=True).data)
+
+class FlashcardUnderstoodView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsProfileComplete]
+
+    def post(self, request, pk):
+        flashcard = get_object_or_404(
+            active_flashcards(),
+            pk=pk
+        )
+        understood = request.data.get("understood", True)
+        if isinstance(understood, str):
+            understood = understood.lower() in ("true", "1", "yes")
+        progress, _ = UserProgress.objects.get_or_create(
+            user=request.user,
+            flashcard=flashcard,
+        )
+
+        now = timezone.now()
+        progress.understood = bool(understood)
+        progress.understood_at = now if progress.understood else None
+        progress.updated_at = now
+        progress.save(update_fields=['understood', 'understood_at', 'updated_at'])
+
+        return Response(
+            {
+                "flashcard_id": flashcard.id,
+                "understood": progress.understood,
+                "understood_at": progress.understood_at,
+            },
+            status=status.HTTP_200_OK,
+        )

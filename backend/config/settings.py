@@ -69,6 +69,10 @@ CELERY_TASK_ACKS_LATE = True
 CELERY_TASK_REJECT_ON_WORKER_LOST = True
 CELERY_TASK_ALWAYS_EAGER = env("CELERY_TASK_ALWAYS_EAGER", "False") == "True"
 CELERY_TASK_EAGER_PROPAGATES = env("CELERY_TASK_EAGER_PROPAGATES", "False") == "True"
+CELERY_TASK_ROUTES = {
+    'verification.tasks.process_note_task': {'queue': 'ocr'},
+    'knowledge.tasks.generate_evidence_embedding_task': {'queue': 'embeddings'},
+}
 
 # Application definition
 
@@ -79,6 +83,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.postgres',
 
     'rest_framework',
     'corsheaders',

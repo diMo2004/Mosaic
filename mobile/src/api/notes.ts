@@ -26,3 +26,7 @@ export const getExtractedClaims = async () => {
 export const verifyClaim = async (claimId: number) => {
     return (await apiClient.post(`/api/verification/claims/${claimId}/verify/`)).data;
 };
+
+export const getNotes = async () => {
+    return (await apiClient.get('/api/notes/')).data;
+};

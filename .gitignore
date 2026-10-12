@@ -25,3 +25,6 @@ Thumbs.db
 # Gunicorn runtime files (created by Docker volume mount on Windows)
 .gunicorn/
 backend/.gunicorn/
+.neon
+.env.local
+node_modules/

@@ -40,3 +40,26 @@ export const sendFeedback = async (flashcardId: number, feedbackType: 'like' | '
 export const getExplanation = async (canonicalClaimId: number) => {
     return (await apiClient.get(`/api/learning/canonical-claims/${canonicalClaimId}/explain/`)).data;
 };
+
+export const markFlashcardUnderstood = async (flashcardId: number, understood: boolean = true) => {
+    return (await apiClient.post(`/api/learning/flashcards/${flashcardId}/understood/`, { understood
+    })).data;
+};
+
+export const getProgressSummary = async () => {
+    return (await apiClient.get('/api/learning/progress/')).data;
+};
+
+export const getMasteryStatus = async (conceptId: number) => {
+    return (await apiClient.get(`/api/learning/concepts/${conceptId}/mastery-status/`)).data;
+};
+
+export const startQuestionnaire = async (conceptId: number) => {
+    return (await apiClient.post(`/api/learning/concepts/${conceptId}/questionnaires/start/`)).data;
+};
+export const submitQuestionnaire = async (questionnaireId: number, answers: { question_id: number; selected_option: number }[]) => {
+    return (await apiClient.post(`/api/learning/questionnaires/${questionnaireId}/submit/`, { answers })).data;
+};
+export const getUserBadges = async () => {
+    return (await apiClient.get('/api/learning/badges/')).data;
+};

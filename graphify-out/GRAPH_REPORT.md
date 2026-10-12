@@ -1,71 +1,76 @@
-# Graph Report - Mosaic  (2026-09-28)
+# Graph Report - Mosaic  (2026-10-12)
 
 ## Corpus Check
-- 122 files · ~49,693 words
+- 143 files · ~54,203 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 9 file(s) not represented in the graph (top: (none) 7, .example 2)
 
 ## Summary
-- 691 nodes · 1378 edges · 55 communities (24 shown, 31 thin omitted)
-- Extraction: 88% EXTRACTED · 12% INFERRED · 0% AMBIGUOUS · INFERRED: 168 edges (avg confidence: 0.95)
+- 799 nodes · 1719 edges · 64 communities (33 shown, 31 thin omitted)
+- Extraction: 87% EXTRACTED · 13% INFERRED · 0% AMBIGUOUS · INFERRED: 225 edges (avg confidence: 0.95)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `18751c71`
+- Built from commit: `be8e3fae`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- verification/tests.py
+- knowledge/models.py
 - learning/views.py
 - users/views.py
-- RootNavigator.tsx
-- Concept
+- learning.ts
+- knowledge/admin.py
 - dependencies
 - expo
-- django_db
+- django_conf
 - os
 - HybridOCRProvider
-- django_conf
+- CanViewOwnNotes
 - django_apps
 - App Status
 - MOSAIC Architecture
 - compilerOptions
-- ClaimVerificationService
+- FlashcardAPITests
 - knowledge/views.py
 - PlaceholderOCRProvider
 - Docker Compose Configuration
-- knowledge/admin.py
+- scripts
 - CSE Technology & Concept Knowledge Graph
 - Current State
 - GoogleAuthTests
 - learning/tests.py
-- EmbeddingServiceError
-- ClaimVerificationServiceTests
-- knowledge/tests.py
 - EmbeddingService
-- 0006_evidence_embedding.py
-- knowledge/tasks.py
+- verification/tests.py
+- AGENTS.md
 - copilot-instructions.md
 - AGENTS.md
-- KnowledgeAPIPermissionTests
-- KnowledgeModelTests
-- verification/admin.py
-- .is_ai_usable
-- .can_redistribute
+- notes/views.py
+- django_contrib
+- Source
+- package.json
 - d_mosaic_backend_learning_services_py
+- auth.ts
+- notes.ts
+- ExtractedClaim
+- claim_extraction.py
+- factory.py
+- RootNavigator.tsx
+- ._run_azure_fallback
+- manage.py
+- CLAUDE.md
 
 ## God Nodes (most connected - your core abstractions)
-1. `Evidence` - 34 edges
-2. `ExtractedClaim` - 26 edges
-3. `Source` - 25 edges
-4. `CanonicalClaim` - 23 edges
-5. `ClaimVerificationService` - 22 edges
-6. `Concept` - 21 edges
-7. `RAGExplanationService` - 20 edges
-8. `FlashcardAPITests` - 20 edges
-9. `SourceDocument` - 19 edges
-10. `IsProfileComplete` - 19 edges
+1. `Source` - 39 edges
+2. `Evidence` - 36 edges
+3. `ExtractedClaim` - 29 edges
+4. `Concept` - 29 edges
+5. `IngestionItem` - 28 edges
+6. `ClaimVerificationService` - 25 edges
+7. `CanonicalClaim` - 24 edges
+8. `SourceDocument` - 23 edges
+9. `MasteryService` - 21 edges
+10. `FlashcardAPITests` - 21 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Mosaic CI/CD Workflow` --semantically_similar_to--> `Docker Compose Configuration`  [INFERRED] [semantically similar]
@@ -76,8 +81,8 @@
   README.md → docs/architecture.md
 - `UnmappedConceptReviewAdmin` --uses--> `Concept`  [INFERRED]
   backend/knowledge/admin.py → backend/knowledge/models.py
-- `UnmappedConceptReviewAdmin` --uses--> `ConceptRelationship`  [INFERRED]
-  backend/knowledge/admin.py → backend/knowledge/models.py
+- `ExternalIngestionPipeline` --uses--> `Evidence`  [INFERRED]
+  backend/knowledge/ingestion/pipeline.py → backend/knowledge/models.py
 
 ## Import Cycles
 - None detected.
@@ -86,51 +91,51 @@
 - **Knowledge Ingestion Pipeline** — backend_notes, backend_verification, backend_knowledge, backend_learning [EXTRACTED 1.00]
 - **MVP Technology Stack** — docker_compose, github_actions_ci, backend_users [EXTRACTED 1.00]
 
-## Communities (55 total, 31 thin omitted)
+## Communities (64 total, 31 thin omitted)
 
-### Community 0 - "verification/tests.py"
-Cohesion: 0.25
-Nodes (8): ExtractedClaim, Source, SourceDocument, Meta, NoteProcessingJob, NoteProcessingService, atomic, django_utils
+### Community 0 - "knowledge/models.py"
+Cohesion: 0.14
+Nodes (13): Migration, Migration, Evidence, embed_evidence_task(), shared_task, Migration, Migration, Migration (+5 more)
 
 ### Community 1 - "learning/views.py"
-Cohesion: 0.07
-Nodes (32): FlashcardAdmin, FlashcardFeedbackAdmin, PlaylistAdmin, PlaylistItemAdmin, PlaylistItemInline, register, UserProgressAdmin, Flashcard (+24 more)
+Cohesion: 0.06
+Nodes (48): Concept, FlashcardAdmin, FlashcardFeedbackAdmin, PlaylistAdmin, PlaylistItemAdmin, PlaylistItemInline, register, UserProgressAdmin (+40 more)
 
 ### Community 2 - "users/views.py"
-Cohesion: 0.09
-Nodes (24): UserProfile, CompleteProfileSerializer, GoogleAuthSerializer, Meta, RegisterSerializer, create_user_profile(), CompleteProfileView, GoogleAuthView (+16 more)
+Cohesion: 0.05
+Nodes (38): URL configuration for config project. The `urlpatterns` list routes URLs to…, KnowledgeAPIPermissionTests, APITestCase, NotePermissionTests, APITestCase, UserProfile, CompleteProfileSerializer, GoogleAuthSerializer (+30 more)
 
-### Community 3 - "RootNavigator.tsx"
+### Community 3 - "learning.ts"
+Cohesion: 0.23
+Nodes (14): createPlaylist(), getExplanation(), getFlashcardDetail(), getFlashcards(), getPlaylists(), saveFlashcard(), sendFeedback(), unsaveFlashcard() (+6 more)
+
+### Community 4 - "knowledge/admin.py"
 Cohesion: 0.06
-Nodes (55): App(), styles, devDependencies, @types/react, typescript, main, name, private (+47 more)
-
-### Community 4 - "Concept"
-Cohesion: 0.16
-Nodes (11): Command, BaseCommand, Concept, ConceptRelationship, Meta, UnmappedConceptReview, get_cached_nx_graph(), Builds and caches the NetworkX in-memory graph from PostgreSQL. (+3 more)
+Nodes (30): action, CanonicalClaimAdmin, ConceptAdmin, ConceptRelationshipAdmin, EvidenceAdmin, EvidenceInline, ExtractedClaimAdmin, register (+22 more)
 
 ### Community 5 - "dependencies"
-Cohesion: 0.08
-Nodes (24): dependencies, axios, expo, expo-dev-client, expo-document-picker, expo-secure-store, expo-status-bar, react (+16 more)
+Cohesion: 0.14
+Nodes (14): dependencies, axios, expo, expo-dev-client, expo-document-picker, expo-secure-store, expo-status-bar, react (+6 more)
 
 ### Community 6 - "expo"
 Cohesion: 0.06
 Nodes (34): backgroundColor, backgroundImage, foregroundImage, monochromeImage, adaptiveIcon, package, permissions, predictiveBackGestureEnabled (+26 more)
 
-### Community 7 - "django_db"
-Cohesion: 0.09
-Nodes (16): Migration, Migration, Migration, Migration, Migration, Migration, Migration, Migration (+8 more)
+### Community 7 - "django_conf"
+Cohesion: 0.11
+Nodes (13): Migration, Migration, Migration, Migration, Migration, Migration, Migration, Migration (+5 more)
 
 ### Community 8 - "os"
-Cohesion: 0.07
-Nodes (16): ASGI config for config project. It exposes the ASGI callable as a module-level…, WSGI config for config project. It exposes the WSGI callable as a module-level…, main(), Django's command-line utility for administrative tasks., Run administrative tasks., ClaimExtractionService, get_extractor_model(), dj_database_url (+8 more)
+Cohesion: 0.17
+Nodes (8): ASGI config for config project. It exposes the ASGI callable as a module-level…, WSGI config for config project. It exposes the WSGI callable as a module-level…, dj_database_url, django_core_asgi, django_core_wsgi, dotenv, os, pathlib
 
 ### Community 9 - "HybridOCRProvider"
-Cohesion: 0.12
-Nodes (13): ABC, OCRProvider, get_azure_client(), get_gemini_model(), HybridOCRProvider, Attempts OCR & visual analysis via Gemini-1.5-Flash. Falls back to Azure…, Dispatches to Text Parser, Document Parser, or Multimodal Image Parser and…, Extracts the absolute filesystem path from FieldFile or string. (+5 more)
+Cohesion: 0.28
+Nodes (4): HybridOCRProvider, Attempts OCR & visual analysis via Gemini-1.5-Flash. Falls back to Azure…, Dispatches to Text Parser, Document Parser, or Multimodal Image Parser and…, Extracts the absolute filesystem path from FieldFile or string.
 
-### Community 10 - "django_conf"
-Cohesion: 0.07
-Nodes (22): URL configuration for config project. The `urlpatterns` list routes URLs to…, NoteAdmin, register, Meta, Note, CanViewOwnNotes, BasePermission, Custom permission to allow users to view their own notes. (+14 more)
+### Community 10 - "CanViewOwnNotes"
+Cohesion: 0.16
+Nodes (8): CanViewOwnNotes, BasePermission, Custom permission to allow users to view their own notes., Meta, NoteDetailSerializer, NoteDetailView, NoteListView, rest_framework_permissions
 
 ### Community 11 - "django_apps"
 Cohesion: 0.12
@@ -138,7 +143,7 @@ Nodes (11): KnowledgeConfig, AppConfig, LearningConfig, AppConfig, NotesConfig, 
 
 ### Community 12 - "App Status"
 Cohesion: 0.11
-Nodes (18): App Status, Audience And Product Split, Current Work, External ingestion, Future Work (updated after Category 9), Knowledge — models and admin in place, Learning — category 7 done, MOSAIC Roadmap (+10 more)
+Nodes (18): App Status, Audience And Product Split, Current Work, External ingestion — completed (Category 10), Future Work (updated after Category 9), Knowledge — models and admin in place, Learning — category 7 done, MOSAIC Roadmap (+10 more)
 
 ### Community 13 - "MOSAIC Architecture"
 Cohesion: 0.32
@@ -148,17 +153,17 @@ Nodes (8): Knowledge App, Learning App, Notes App, Users App, Verification App, 
 Cohesion: 0.29
 Nodes (6): compilerOptions, moduleResolution, paths, strict, extends, expo/tsconfig.base
 
-### Community 15 - "ClaimVerificationService"
-Cohesion: 0.09
-Nodes (9): FlashcardGenerationService, Generate flashcards from a given canonical claim., FlashcardAPITests, ClaimVerificationService, atomic, ConceptAssignmentService, Finds direct keywor matches in text against concept names., Retrieves a focused 1-hop sub-graph around anchor nodes. Returns a list of… (+1 more)
+### Community 15 - "FlashcardAPITests"
+Cohesion: 0.15
+Nodes (3): FlashcardGenerationService, Generate flashcards from a given canonical claim., FlashcardAPITests
 
 ### Community 16 - "knowledge/views.py"
-Cohesion: 0.19
-Nodes (14): CanonicalClaimSerializer, EvidenceSerializer, ExtractedClaimSerializer, Meta, SourceDocumentSerializer, SourceSerializer, CanonicalClaimViewSet, EvidenceViewSet (+6 more)
+Cohesion: 0.20
+Nodes (13): CanonicalClaimSerializer, EvidenceSerializer, ExtractedClaimSerializer, Meta, SourceDocumentSerializer, SourceSerializer, CanonicalClaimViewSet, EvidenceViewSet (+5 more)
 
-### Community 19 - "knowledge/admin.py"
-Cohesion: 0.19
-Nodes (12): action, CanonicalClaimAdmin, ConceptAdmin, ConceptRelationshipAdmin, EvidenceAdmin, EvidenceInline, ExtractedClaimAdmin, register (+4 more)
+### Community 19 - "scripts"
+Cohesion: 0.20
+Nodes (10): scripts, android, build:android:apk, build:preview, ios, lint, prebuild, start (+2 more)
 
 ### Community 36 - "GoogleAuthTests"
 Cohesion: 0.22
@@ -166,43 +171,79 @@ Nodes (4): AuthTests, GoogleAuthTests, APITestCase, patch
 
 ### Community 37 - "learning/tests.py"
 Cohesion: 0.07
-Nodes (25): Any, CanonicalClaim, Evidence, EvidenceRetrievalError, EvidenceRetrievalService, RuntimeError, Raised when semantic evidence retrieval cannot be completed., RuntimeError (+17 more)
+Nodes (26): Any, Migration, CanonicalClaim, EvidenceRetrievalError, EvidenceRetrievalService, RuntimeError, Raised when semantic evidence retrieval cannot be completed., RuntimeError (+18 more)
 
-### Community 38 - "EmbeddingServiceError"
-Cohesion: 0.18
-Nodes (8): build_embedding_text(), Command, BaseCommand, EmbeddingServiceError, RuntimeError, Raised when an embedding cannot be generated., django_core_management_base, google
+### Community 38 - "EmbeddingService"
+Cohesion: 0.16
+Nodes (9): build_embedding_text(), Command, BaseCommand, EmbeddingService, EmbeddingServiceError, RuntimeError, Raised when an embedding cannot be generated., EmbeddingServiceTests (+1 more)
 
-### Community 39 - "ClaimVerificationServiceTests"
+### Community 39 - "verification/tests.py"
+Cohesion: 0.16
+Nodes (11): SourceDocument, NoteProcessingService, atomic, ClaimVerificationServiceTests, NoteProcessJobIntegrationTests, patch, TestCase, test_embedding_task_skips_existing_embedding() (+3 more)
+
+### Community 50 - "notes/views.py"
+Cohesion: 0.13
+Nodes (13): Meta, Note, NoteUploadSerializer, NoteUploadView, NoteProcessingJobAdmin, register, Command, BaseCommand (+5 more)
+
+### Community 51 - "django_contrib"
+Cohesion: 0.40
+Nodes (3): NoteAdmin, register, django_contrib
+
+### Community 52 - "Source"
+Cohesion: 0.09
+Nodes (33): ArxivAdapter, Fetches academic computer science preprints from arXiv., GitHubAdapter, Fetches README and doc markdown from GitHub repositories., Fetches community discussion strictly for evidence attribution after legal…, RedditAdapter, Fetches high-quality answers from Stack Overflow or CSE Stack Exchange., StackExchangeAdapter (+25 more)
+
+### Community 53 - "package.json"
+Cohesion: 0.12
+Nodes (16): devDependencies, @types/react, typescript, main, name, private, version, expo-dev-client (+8 more)
+
+### Community 55 - "auth.ts"
 Cohesion: 0.19
-Nodes (8): ClaimVerificationServiceTests, NoteProcessJobIntegrationTests, patch, TestCase, test_embedding_task_skips_existing_embedding(), test_embedding_task_stores_vector(), test_placeholder_evidence_queues_embedding_after_commit(), override_settings
+Nodes (11): completeProfile(), login(), register(), apiClient, BASE_URL, configuredApiUrl, CustomAxiosRequestConfig, CompleteProfileScreen() (+3 more)
 
-### Community 40 - "knowledge/tests.py"
-Cohesion: 0.36
-Nodes (6): decimal, django_contrib_auth_models, django_core_files_uploadedfile, django_test, rest_framework_test, unittest_mock
+### Community 56 - "notes.ts"
+Cohesion: 0.29
+Nodes (8): getExtractedClaims(), getNoteStatus(), uploadNote(), verifyClaim(), ClaimReviewScreen(), ProcessingStatusScreen(), UploadNoteScreen(), expo-document-picker
 
-### Community 43 - "knowledge/tasks.py"
-Cohesion: 0.33
-Nodes (4): embed_evidence_task(), EvidenceRetrievalService, logging, shared_task
+### Community 57 - "ExtractedClaim"
+Cohesion: 0.29
+Nodes (4): ExtractedClaim, ClaimVerificationService, atomic, EvidenceRetrievalService
+
+### Community 58 - "claim_extraction.py"
+Cohesion: 0.21
+Nodes (4): ClaimExtractionService, get_extractor_model(), google_genai, json
+
+### Community 59 - "factory.py"
+Cohesion: 0.22
+Nodes (7): OCRProvider, ABC, get_gemini_model(), google_api_core, io, mimetypes, pil
+
+### Community 60 - "RootNavigator.tsx"
+Cohesion: 0.24
+Nodes (6): App(), styles, RootNavigator(), Stack, Tab, expo
+
+### Community 64 - "manage.py"
+Cohesion: 0.40
+Nodes (4): main(), Django's command-line utility for administrative tasks., Run administrative tasks., sys
 
 ## Knowledge Gaps
-- **109 isolated node(s):** `Migration`, `Migration`, `Migration`, `Migration`, `Migration` (+104 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 288 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **113 isolated node(s):** `Migration`, `Migration`, `Migration`, `Migration`, `Migration` (+108 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 329 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **31 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Source` connect `verification/tests.py` to `Concept`, `learning/tests.py`, `ClaimVerificationServiceTests`, `knowledge/tests.py`, `knowledge/tasks.py`, `ClaimVerificationService`, `knowledge/views.py`, `KnowledgeAPIPermissionTests`, `KnowledgeModelTests`, `knowledge/admin.py`, `.is_ai_usable`, `.can_redistribute`?**
-  _High betweenness centrality (0.032) - this node is a cross-community bridge._
-- **Why does `Evidence` connect `learning/tests.py` to `verification/tests.py`, `Concept`, `EmbeddingServiceError`, `ClaimVerificationServiceTests`, `knowledge/tests.py`, `knowledge/tasks.py`, `ClaimVerificationService`, `knowledge/views.py`, `KnowledgeModelTests`, `knowledge/admin.py`?**
-  _High betweenness centrality (0.029) - this node is a cross-community bridge._
-- **Why does `HybridOCRProvider` connect `HybridOCRProvider` to `verification/tests.py`?**
-  _High betweenness centrality (0.029) - this node is a cross-community bridge._
-- **Are the 15 inferred relationships involving `Evidence` (e.g. with `EvidenceInline` and `build_embedding_text()`) actually correct?**
-  _`Evidence` has 15 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 12 inferred relationships involving `ExtractedClaim` (e.g. with `ExtractedClaimSerializer` and `KnowledgeModelTests`) actually correct?**
-  _`ExtractedClaim` has 12 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 11 inferred relationships involving `Source` (e.g. with `SourceSerializer` and `KnowledgeAPIPermissionTests`) actually correct?**
-  _`Source` has 11 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 9 inferred relationships involving `CanonicalClaim` (e.g. with `CanonicalClaimSerializer` and `CanonicalClaimViewSet`) actually correct?**
-  _`CanonicalClaim` has 9 INFERRED edges - model-reasoned connections that need verification._
+- **Why does `Source` connect `Source` to `knowledge/models.py`, `users/views.py`, `knowledge/admin.py`, `learning/tests.py`, `verification/tests.py`, `FlashcardAPITests`, `knowledge/views.py`, `notes/views.py`, `ExtractedClaim`?**
+  _High betweenness centrality (0.058) - this node is a cross-community bridge._
+- **Why does `Concept` connect `learning/views.py` to `knowledge/models.py`, `users/views.py`, `knowledge/admin.py`, `learning/tests.py`, `verification/tests.py`, `FlashcardAPITests`?**
+  _High betweenness centrality (0.038) - this node is a cross-community bridge._
+- **Why does `HybridOCRProvider` connect `HybridOCRProvider` to `notes/views.py`, `factory.py`, `._run_azure_fallback`, `verification/tests.py`?**
+  _High betweenness centrality (0.026) - this node is a cross-community bridge._
+- **Are the 18 inferred relationships involving `Source` (e.g. with `ArxivAdapter` and `GitHubAdapter`) actually correct?**
+  _`Source` has 18 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 16 inferred relationships involving `Evidence` (e.g. with `EvidenceInline` and `ExternalIngestionPipeline`) actually correct?**
+  _`Evidence` has 16 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 13 inferred relationships involving `ExtractedClaim` (e.g. with `ExternalIngestionPipeline` and `ExtractedClaimSerializer`) actually correct?**
+  _`ExtractedClaim` has 13 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 13 inferred relationships involving `Concept` (e.g. with `UnmappedConceptReviewAdmin` and `Command`) actually correct?**
+  _`Concept` has 13 INFERRED edges - model-reasoned connections that need verification._
