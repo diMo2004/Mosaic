@@ -364,8 +364,7 @@ class RAGExplanationServiceTests(APITestCase):
 
         with self.assertRaises(RAGExplanationServiceError):
             service.generate_explanation(self.canonical_claim)
-
-    @patch("learning.services.rag_explanation.logger")
+            
     def test_provider_failure_is_wrapped(self):
         client = FakeExplanationClient(
             error=RuntimeError("provider unavailable"),
