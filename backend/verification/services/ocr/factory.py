@@ -86,10 +86,9 @@ class HybridOCRProvider(OCRProvider):
             raise RuntimeError("[Error: Gemini API limit reached and Azure Document Intelligence is not configured.]")
 
         try:
-            from azure.ai.documentintelligence.models import AnalyzeDocumentRequest
             poller = client.begin_analyze_document(
                 model_id="prebuilt-layout",
-                analyze_request=AnalyzeDocumentRequest(bytes_source=image_bytes)
+                body=image_bytes,
             )
             result = poller.result()
             # Return extracted layout content (includes text, tables, and structure)
