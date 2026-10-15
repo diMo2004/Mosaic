@@ -14,6 +14,9 @@ logger = logging.getLogger(__name__)
     name="verification.process_note",
     max_retries=3,
     acks_late=True,
+    # Processing state and errors are persisted in NoteProcessingJob/Note;
+    # this task's Celery result is not consumed by the app.
+    ignore_result=True,
 )
 def process_note_task(self, note_id: int):
     """
