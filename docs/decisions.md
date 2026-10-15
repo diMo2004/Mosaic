@@ -286,9 +286,9 @@ optional playlist_id on save; optional playlist_id on unsave
 
 A user may have additional named playlists. Default playlist must not be deleted.
 
-## 23. Note Library Stays Gated Until Rewards
+## 23. Note Library Is Owner-Scoped Until The Project Presentation
 
-`can_view_own_notes` remains a manual/admin flag until the contributor/reward system exists. Upload stays open to every authenticated user.
+Until the project presentation, any profile-complete authenticated user can list and view their own notes. The API must continue to scope note queries to the authenticated owner. Enable the existing `can_view_own_notes` premium/contributor gate after the presentation. Upload stays open to every authenticated user.
 
 ## 24. Concept Graph Lives In Postgres; NetworkX Is A Cache
 

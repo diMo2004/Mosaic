@@ -14,6 +14,16 @@ class Flashcard(models.Model):
         (DIFFICULTY_ADVANCED, 'Advanced'),
     ]
 
+    CARD_TYPE_CONCEPT_VISUAL = 'concept_visual'
+    CARD_TYPE_RECALL = 'recall'
+    CARD_TYPE_QUICK_QUIZ = 'quick_quiz'
+
+    CARD_TYPE_CHOICES = [
+        (CARD_TYPE_CONCEPT_VISUAL, 'Concept Visual'),
+        (CARD_TYPE_RECALL, 'Recall'),
+        (CARD_TYPE_QUICK_QUIZ, 'Quick Quiz'),
+    ]
+
     title = models.CharField(max_length=255)
     prompt = models.TextField()
     answer = models.TextField()
@@ -35,6 +45,28 @@ class Flashcard(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    card_type = models.CharField(
+        max_length=20,
+        choices=CARD_TYPE_CHOICES,
+        default=CARD_TYPE_RECALL,
+        db_index=True,
+    )
+    quiz_options = models.JSONField(
+        null=True,
+        blank=True,
+        help_text='[{"text": str, "is_correct": bool, "explanation": str}] for quick_quiz cards',
+    )
+    key_points = models.JSONField(
+        null=True,
+        blank=True,
+        help_text='List of key points strings for recall cards',
+    )
+    visual_hint = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        help_text='Short label or emoji for concept_visual diagram area',
+    )
     class Meta:
         ordering = ['-created_at']
 

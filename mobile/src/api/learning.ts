@@ -1,12 +1,13 @@
 // Feed, detail, save/unsave playlist, feedback, explain
 import {apiClient} from './client';
+import type { FlashcardDTO, FlashcardListResponse } from '@/types/flashcard';
 
-export const getFlashcards = async () => {
-    return (await apiClient.get('/api/learning/flashcards/')).data;
+export const getFlashcards = async (): Promise<FlashcardListResponse> => {
+    return (await apiClient.get<FlashcardListResponse>('/api/learning/flashcards/')).data;
 };
 
-export const getFlashcardDetail = async (id: number) => {
-    return (await apiClient.get(`/api/learning/flashcards/${id}/`)).data;
+export const getFlashcardDetail = async (id: number): Promise<FlashcardDTO> => {
+    return (await apiClient.get<FlashcardDTO>(`/api/learning/flashcards/${id}/`)).data;
 };
 
 export const getPlaylists = async () => {

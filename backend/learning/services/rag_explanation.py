@@ -27,7 +27,7 @@ class RAGExplanationService:
         if not api_key and client is None:
             raise RAGExplanationServiceError("GEMINI_API_KEY is not set in settings or environment variables.")
         self.client = client or genai.Client(api_key=api_key)
-        self.model_name = getattr(settings, "GEMINI_CLAIM_MODEL", "gemini-3.6-flash")
+        self.model_name = getattr(settings, "GEMINI_CLAIM_MODEL", "gemini-3.8-flash")
         self.evidence_retriever = evidence_retriever or EvidenceRetrievalService()
 
     def generate_explanation(self, canonical_claim: CanonicalClaim, *, top_k: int = 4) -> dict[str, Any]:

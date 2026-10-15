@@ -11,12 +11,13 @@ export const uploadNote = async (title: string, fileUri: string, fileName: strin
     } as any);
 
     return (await apiClient.post('/api/notes/upload/', formData, {
+        // Overrides apiClient's JSON default; Axios/RN supplies the boundary.
         headers: { 'Content-Type': 'multipart/form-data' },
     })).data;
 };
 
 export const getNoteStatus = async (noteId: number) => {
-    return (await apiClient.get(`/api/notes/${noteId}.`)).data;
+    return (await apiClient.get(`/api/notes/${noteId}/`)).data;
 };
 
 export const getExtractedClaims = async () => {

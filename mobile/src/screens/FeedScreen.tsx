@@ -2,88 +2,237 @@
 // Displays cards with concept tag, canonical claim, and provenance indicator.
 // Backend Endpoint: GET /api/learning/feed/
 
-import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Button, Alert } from 'react-native';
-import { getFlashcards } from '@/api/learning';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+import {
+    ActivityIndicator,
+    FlatList,
+    RefreshControl,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+    ViewToken,
+} from 'react-native';
+import { CardRenderer } from '@/components/cards';
+import { useFlashcardFeed } from '@/hooks/useFlashcardFeed';
+import type { FlashcardDTO } from '@/types/flashcard';
 
 export default function FeedScreen({ navigation }: any) {
-    const [cards, setCards] = useState<any[]>([]);
-    const [needsProfile, setNeedsProfile] = useState(false);
-    const loadFeed = async () => {
-        setNeedsProfile(false);
-        try {
-            const res = await getFlashcards();
-            setCards(Array.isArray(res) ? res :res.results || []);
-        } catch (error: any) {
-            if (error.response?.status === 403) {
-                setNeedsProfile(true);
-            } else {
-                Alert.alert('Feed Error', JSON.stringify(error.response?.data || error.message));
-            }
-        }
-    };
+    const feed = useFlashcardFeed();
+    const [viewportHeight, setViewportHeight] = useState(0);
+    const onCardVisibleRef = useRef(feed.onCardVisible);
+    onCardVisibleRef.current = feed.onCardVisible;
 
-    useEffect(() => {
-        loadFeed();
-    }, []);
+    const viewabilityConfig = useRef({
+        itemVisiblePercentThreshold: 80,
+        minimumViewTime: 100,
+    }).current;
+
+    const onViewableItemsChanged = useRef(
+        ({ viewableItems }: { viewableItems: ViewToken[] }) => {
+            const index = viewableItems.find(token => token.isViewable)?.index;
+            if (typeof index === 'number') {
+                onCardVisibleRef.current(index);
+            }
+        },
+    ).current;
+
+    const renderItem = useCallback(({ item }: { item: FlashcardDTO }) => (
+        <View style={{ height: viewportHeight }}>
+            <CardRenderer
+                card={item}
+                viewState={feed.viewStates[item.id]}
+                cardHeight={viewportHeight}
+                onRevealAnswer={feed.revealAnswer}
+                onSelectOption={feed.selectOption}
+                onToggleSave={feed.toggleSave}
+                onMarkUnderstood={feed.markUnderstood}
+                onOpenDetail={id => navigation.navigate('FlashcardDetail', { id })}
+                onOpenExplain={claimId =>
+                    navigation.navigate('GroundedExplain', { claimId })
+                }
+            />
+        </View>
+    ), [
+        feed.viewStates,
+        feed.revealAnswer,
+        feed.selectOption,
+        feed.toggleSave,
+        feed.markUnderstood,
+        navigation,
+        viewportHeight,
+    ]);
+
+    const getItemLayout = useCallback(
+        (_: ArrayLike<FlashcardDTO> | null | undefined, index: number) => ({
+            length: viewportHeight,
+            offset: viewportHeight * index,
+            index,
+        }),
+        [viewportHeight],
+    );
+
+    const progressWidth = useMemo(() => {
+        if (!feed.cards.length) return '0%' as `${number}%`;
+        return `${((feed.currentIndex + 1) / feed.cards.length) * 100}%` as `${number}%`;
+    }, [feed.currentIndex, feed.cards.length]);
+
+    if (feed.status === 'idle' || feed.status === 'loading') {
+        return (
+            <View style={styles.center}>
+                <ActivityIndicator size="large" color="#38bdf8" />
+                <Text style={styles.secondary}>Curating your flashcard feed...</Text>
+            </View>
+        );
+    }
+
+    if (feed.status === 'error' && feed.cards.length === 0) {
+        return (
+            <View style={styles.center}>
+                <Text style={styles.title}>Couldn’t load the feed</Text>
+                <Text style={styles.secondary}>{feed.error}</Text>
+                <TouchableOpacity style={styles.retry} onPress={feed.refresh}>
+                    <Text style={styles.retryText}>Try again</Text>
+                </TouchableOpacity>
+            </View>
+        );
+    }
 
     return (
-    <View style={{ padding: 20, flex: 1 }}>
-      <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>
-        Public Flashcard Feed
-      </Text>
-
-      <Button title="Refresh Feed" onPress={loadFeed} />
-
-      {needsProfile && (
         <View
-          style={{
-            padding: 16,
-            backgroundColor: '#fef2f2',
-            borderRadius: 8,
-            marginVertical: 10,
-          }}
-        >
-          <Text style={{ color: '#b91c1c', fontWeight: 'bold' }}>
-            Profile Incomplete
-          </Text>
-          <Text style={{ marginVertical: 6 }}>
-            Please complete your profile to unlock flashcards.
-          </Text>
-          <Button
-            title="Go to Complete Profile"
-            onPress={() => navigation.navigate('CompleteProfile')}
-          />
-        </View>
-      )}
-
-      <FlatList
-        data={cards}
-        keyExtractor={(item) => String(item.id)}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            onPress={() =>
-              navigation.navigate('FlashcardDetail', { id: item.id })
-            }
-            style={{
-              padding: 12,
-              borderWidth: 1,
-              marginVertical: 6,
-              borderRadius: 4,
+            style={styles.container}
+            onLayout={event => {
+                const height = event.nativeEvent.layout.height;
+                setViewportHeight(current => current === height ? current : height);
             }}
-          >
-            <Text style={{ color: 'blue', fontWeight: 'bold' }}>
-              [{item.concept_name}]
-            </Text>
-            <Text style={{ fontSize: 16, marginTop: 4 }}>
-              {item.canonical_text || item.prompt}
-            </Text>
-            <Text style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
-              Difficulty: {item.difficulty} | Views: {item.view_count || 0}
-            </Text>
-          </TouchableOpacity>
-        )}
-      />
-    </View>
-  );
+        >
+            {viewportHeight > 0 && feed.cards.length > 0 && (
+                <>
+                    <FlatList
+                        data={feed.cards}
+                        keyExtractor={item => String(item.id)}
+                        renderItem={renderItem}
+                        extraData={feed.viewStates}
+                        pagingEnabled
+                        snapToInterval={viewportHeight}
+                        decelerationRate="fast"
+                        showsVerticalScrollIndicator={false}
+                        initialNumToRender={1}
+                        maxToRenderPerBatch={2}
+                        windowSize={3}
+                        getItemLayout={getItemLayout}
+                        onViewableItemsChanged={onViewableItemsChanged}
+                        viewabilityConfig={viewabilityConfig}
+                        refreshControl={
+                            <RefreshControl
+                                refreshing={feed.status === 'refreshing'}
+                                onRefresh={feed.refresh}
+                                tintColor="#38bdf8"
+                            />
+                        }
+                    />
+
+                    <View pointerEvents="none" style={styles.progressTrack}>
+                        <View style={[styles.progressFill, { width: progressWidth }]} />
+                    </View>
+
+                    <View pointerEvents="none" style={styles.counter}>
+                        <Text style={styles.counterText}>
+                            {feed.currentIndex + 1} / {feed.cards.length}
+                        </Text>
+                    </View>
+
+                    {feed.currentIndex === feed.cards.length - 1 && (
+                        <View pointerEvents="none" style={styles.endHint}>
+                            <Text style={styles.endHintText}>End of feed · swipe down to revisit</Text>
+                        </View>
+                    )}
+                </>
+            )}
+
+            {feed.cards.length === 0 && feed.status !== 'refreshing' && (
+                <View style={styles.center}>
+                    <Text style={styles.title}>No flashcards yet</Text>
+                    <Text style={styles.secondary}>
+                        Cards appear after knowledge is verified and supported. Upload a note to start the review process.
+                    </Text>
+                    <TouchableOpacity style={styles.retry} onPress={() => navigation.navigate('Upload')}>
+                        <Text style={styles.retryText}>Upload a note</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={feed.refresh}>
+                        <Text style={styles.secondary}>Refresh feed</Text>
+                    </TouchableOpacity>
+                </View>
+            )}
+
+            {feed.status === 'error' && feed.cards.length > 0 && (
+                <View style={styles.inlineError}>
+                    <Text style={styles.inlineErrorText}>
+                        Refresh failed: {feed.error}
+                    </Text>
+                </View>
+            )}
+        </View>
+    );
 }
+
+const styles = StyleSheet.create({
+    container: { flex: 1, backgroundColor: '#090d16' },
+    center: {
+        flex: 1,
+        backgroundColor: '#090d16',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 28,
+    },
+    title: { color: '#f8fafc', fontSize: 20, fontWeight: '800', textAlign: 'center' },
+    secondary: { color: '#94a3b8', marginTop: 12, textAlign: 'center', lineHeight: 21 },
+    retry: {
+        marginTop: 20,
+        backgroundColor: '#1e293b',
+        paddingHorizontal: 18,
+        paddingVertical: 10,
+        borderRadius: 10,
+    },
+    retryText: { color: '#e2e8f0', fontWeight: '700' },
+    progressTrack: {
+        position: 'absolute',
+        top: 0,
+        left: 20,
+        right: 20,
+        height: 3,
+        backgroundColor: '#1e293b',
+        borderRadius: 2,
+    },
+    progressFill: { height: 3, backgroundColor: '#38bdf8', borderRadius: 2 },
+    counter: {
+        position: 'absolute',
+        top: 12,
+        right: 20,
+        backgroundColor: 'rgba(9, 13, 22, 0.72)',
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 12,
+    },
+    counterText: { color: '#cbd5e1', fontSize: 11, fontWeight: '700' },
+    endHint: {
+        position: 'absolute',
+        bottom: 12,
+        alignSelf: 'center',
+        backgroundColor: 'rgba(9, 13, 22, 0.78)',
+        paddingHorizontal: 12,
+        paddingVertical: 7,
+        borderRadius: 14,
+    },
+    endHintText: { color: '#cbd5e1', fontSize: 11 },
+    inlineError: {
+        position: 'absolute',
+        top: 22,
+        left: 20,
+        right: 20,
+        padding: 10,
+        backgroundColor: '#7f1d1d',
+        borderRadius: 8,
+    },
+    inlineErrorText: { color: '#fee2e2', fontSize: 12, textAlign: 'center' },
+});

@@ -44,4 +44,6 @@ class UserProfile(models.Model):
 
     def update_completion_status(self):
         self.profile_completed = not self.missing_required_fields()
-        self.save(update_fields=['profile_completed','updated_at'])
+        # This is also called after the completion fields have been assigned.
+        # Persist the profile values together with the derived completion flag.
+        self.save()

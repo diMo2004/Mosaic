@@ -22,7 +22,7 @@ synchronous OCR pipeline with workers remains future work.
 First users: CSE students.
 Public feed: flashcards from shared canonical knowledge (implemented).
 Personal environment: cards from the user's own verified notes (not implemented).
-Note library list/detail: gated on can_view_own_notes until a later reward system.
+Note library list/detail: currently available to profile-complete owners; enable the can_view_own_notes premium gate after the project presentation.
 Save: playlists, not a flat saved-flag table.
 ```
 
@@ -41,7 +41,7 @@ Google + profile screens on mobile
 
 ### Notes — pipeline wired, still synchronous
 
-Done: upload, owner, gated list/detail, job after upload, in-process OCR + claim extraction.
+Done: upload, owner-scoped list/detail for all profile-complete users (premium gate planned after presentation), job after upload, in-process OCR + claim extraction.
 
 Next:
 

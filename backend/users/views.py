@@ -12,6 +12,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.views import TokenObtainPairView
 from .models import UserProfile
 import os
 
@@ -44,12 +46,49 @@ class RegisterView(generics.CreateAPIView):
     permission_classes = (permissions.AllowAny,)
     serializer_class = RegisterSerializer
 
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        return Response(
+            {
+                **jwt_response_for_user(user),
+                "status": "profile_required",
+                "profile_completed": user.profile.profile_completed,
+                "profile": {
+                    "full_name": user.profile.full_name,
+                    "education_level": user.profile.education_level,
+                    "learning_goal": user.profile.learning_goal,
+                    "interests": user.profile.interests,
+                },
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
 def jwt_response_for_user(user):
     refresh = RefreshToken.for_user(user)
     return {
         'refresh': str(refresh),
         'access': str(refresh.access_token),
     }
+
+
+class ProfileAwareTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        data["profile_completed"] = self.user.profile.profile_completed
+        data["status"] = "authenticated" if data["profile_completed"] else "profile_required"
+        data["profile"] = {
+            "full_name": self.user.profile.full_name,
+            "education_level": self.user.profile.education_level,
+            "learning_goal": self.user.profile.learning_goal,
+            "interests": self.user.profile.interests,
+        }
+        return data
+
+
+class ProfileAwareTokenObtainPairView(TokenObtainPairView):
+    serializer_class = ProfileAwareTokenObtainPairSerializer
 
 class GoogleAuthView(APIView):
     permission_classes = [permissions.AllowAny]
@@ -127,6 +166,16 @@ class GoogleAuthView(APIView):
 
 class CompleteProfileView(APIView):
     permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        profile = request.user.profile
+        return Response({
+            "full_name": profile.full_name,
+            "education_level": profile.education_level,
+            "learning_goal": profile.learning_goal,
+            "interests": profile.interests,
+            "profile_completed": profile.profile_completed,
+        })
 
     def post(self, request):
         serializer = CompleteProfileSerializer(data=request.data)

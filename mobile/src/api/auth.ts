@@ -10,7 +10,10 @@ export const login = async (username: string, password: string) => {
 };
 
 export const register = async (username: string, email: string, password: string) => {
-    return (await apiClient.post('/api/auth/register/', { username, email, password})).data;
+    const res = await apiClient.post('/api/auth/register/', { username, email, password });
+    await SecureStore.setItemAsync('accessToken', res.data.access);
+    await SecureStore.setItemAsync('refreshToken', res.data.refresh);
+    return res.data;
 };
 
 export const completeProfile = async (data: { 
@@ -19,7 +22,18 @@ export const completeProfile = async (data: {
     learning_goal: string;
     interests?: string[];
 }) => {
-    return (await apiClient.post(`/api/auth/complete-profile/`, data)).data;
+    const res = await apiClient.post('/api/auth/complete-profile/', data);
+    if (res.data.access) {
+        await SecureStore.setItemAsync('accessToken', res.data.access);
+    }
+    if (res.data.refresh) {
+        await SecureStore.setItemAsync('refreshToken', res.data.refresh);
+    }
+    return res.data;
+};
+
+export const getProfile = async () => {
+    return (await apiClient.get('/api/auth/complete-profile/')).data;
 };
 
 export const logout = async () => {

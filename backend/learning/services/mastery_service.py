@@ -201,7 +201,7 @@ Return STRICT JSON format as a list of 10 objects:
             ]
         client = genai.Client(api_key=api_key)
         response = client.models.generate_content(
-            model=getattr(settings, "GEMINI_CLAIM_MODEL", "gemini-2.5-flash"),
+            model=getattr(settings, "GEMINI_CLAIM_MODEL", "gemini-3.8-flash"),
             contents=prompt_text,
             config=types.GenerateContentConfig(response_mime_type="application/json"),
         )

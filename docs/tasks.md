@@ -200,7 +200,7 @@ First users: CSE students
 Public flashcards from shared canonical knowledge (DONE)
 Personal flashcards from the user's notes (TODO)
 Save/unsave = playlists, default list "Saved" (DONE)
-Note library gated on can_view_own_notes until rewards (DONE as a flag)
+Note list/detail is owner-only and currently available to all profile-complete users; enable the can_view_own_notes premium gate after the project presentation.
 Postgres taxonomy + NetworkX cache, not Neo4j (DONE)
 Hybrid OCR: Gemini then Azure (DONE)
 CI (GitHub Actions) + Render deploy (DONE)
@@ -342,7 +342,7 @@ Category 12 — Mastery and badges — DONE
     - Concept MasteryBadge awarded upon passing all 5 tiers.
 51. Superset Mastery — DONE:
     - Automatically awarded when 10 subtopics (or all child subtopics if < 10) are mastered.
-    - Note access (can_view_own_notes) remains decoupled from badge awards.
+    - Future note access gate (can_view_own_notes) remains decoupled from badge awards; it is not enabled until after the project presentation.
 
 Category 13 — Production workers and storage — PARTIAL
 
@@ -387,6 +387,33 @@ DONE   Mastery badges (Category 12 fully DONE)
 PARTIAL Scale (Category 14: task 60 scheduled ingestion + rate limiting)
 TODO   Recommendations / Social
 ```
+
+Category 16 — Reel-Feed Implementation — IN PROGRESS
+
+Phase 1: Backend data contract — Done
+  DONE  Add card_type, quiz_options, key_points, visual_hint to Flashcard model
+  DONE  Migration 0006_add_card_type_fields: 4 AddField operations, all nullable/defaulted
+  DONE  Add card_type, quiz_options, key_points, visual_hint to FlashcardSerializer fields
+  Note: view_count is on UserProgress, not Flashcard — not exposed in FlashcardSerializer
+
+Phase 2: TypeScript types + useFlashcardFeed hook — DONE
+  DONE  mobile/src/types/flashcard.ts — FlashcardDTO, CardViewState, QuizOption
+  DONE  mobile/src/hooks/useFlashcardFeed.ts — fetch, view-state, save, understood
+  DONE  learning.ts typed wrappers (getFlashcards, getFlashcardDetail)
+  DONE  FeedScreen.tsx — swap any[] for FlashcardDTO[] (type-only change)
+
+Phase 3: CardShell + ConceptVisualCard + RecallCard + QuickQuizCard — DONE
+  DONE  mobile/src/components/cards/CardShell.tsx
+  DONE  mobile/src/components/cards/ConceptVisualCard.tsx
+  DONE  mobile/src/components/cards/RecallCard.tsx
+  DONE  mobile/src/components/cards/QuickQuizCard.tsx
+  DONE  mobile/src/components/cards/CardRenderer.tsx
+  DONE  mobile/src/components/cards/index.ts barrel export
+
+Phase 4: Full-screen FlatList reel (pagingEnabled, onViewableItemsChanged) — TODO
+Phase 5: LLM card-type and quiz-option generation in flashcard_service.py — TODO
+Phase 6: Backfill, accessibility, analytics — TODO
+
 
 Order to keep:
 

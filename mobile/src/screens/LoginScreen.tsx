@@ -18,11 +18,16 @@ export default function LoginScreen({navigation}: any) {
     setLoading(true);
     try {
       if (isRegister) {
-        await register(username, email, password);
-        Alert.alert('Registration successful', 'You can now log in with your credentials.');
+        const result = await register(username.trim(), email.trim(), password);
+        navigation.replace(result.profile_completed ? 'Main' : 'CompleteProfile', {
+          profile: result.profile,
+        });
+        return;
       }
-      await login(username, password);
-      navigation.replace('Main');
+      const result = await login(username.trim(), password);
+      navigation.replace(result.profile_completed ? 'Main' : 'CompleteProfile', {
+        profile: result.profile,
+      });
     } catch (error: any) {
         Alert.alert('Error', JSON.stringify(error.response?.data || error.message));
     } finally {
@@ -87,13 +92,6 @@ export default function LoginScreen({navigation}: any) {
           title={isRegister ? 'Already have an account? Log In' : 'Need an account? Register'}
           onPress={() => setIsRegister(!isRegister)}
           color="#555"
-        />
-      </View>
-      <View style={{ marginTop: 12 }}>
-        <Button
-          title="Skip to Complete Profile"
-          onPress={() => navigation.navigate('CompleteProfile')}
-          color="#888"
         />
       </View>
     </View>

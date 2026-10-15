@@ -20,10 +20,20 @@ export const apiClient = axios.create({
     timeout: 120000,
 });
 
+const isPublicAuthRequest = (url?: string) =>
+    !!url && [
+        '/api/auth/register/',
+        '/api/auth/login/',
+        '/api/auth/google-auth/',
+        '/api/auth/token/refresh/',
+    ].some((path) => url.includes(path));
+
 apiClient.interceptors.request.use(
     async (config: InternalAxiosRequestConfig) => {
         try {
-            const accessToken = await SecureStore.getItemAsync('accessToken');
+            const accessToken = isPublicAuthRequest(config.url)
+                ? null
+                : await SecureStore.getItemAsync('accessToken');
             if (accessToken && config.headers) {
                 config.headers.Authorization = `Bearer ${accessToken}`;
             }
@@ -45,8 +55,7 @@ apiClient.interceptors.response.use(
     async (error: AxiosError) => {
         const originalRequest = error.config as CustomAxiosRequestConfig;
         if (error.response?.status === 401 && originalRequest && !originalRequest._retry &&
-            !originalRequest.url?.includes('/api/auth/token/refresh/') &&
-            !originalRequest.url?.includes('/api/auth/login/')) {
+            !isPublicAuthRequest(originalRequest.url)) {
             originalRequest._retry = true;
             try {
                 const refreshToken = await SecureStore.getItemAsync('refreshToken');

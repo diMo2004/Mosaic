@@ -26,7 +26,7 @@ def get_extractor_model():
         model_name = getattr(
             settings,
             "GEMINI_CLAIM_MODEL",
-            "gemini-3.6-flash",
+            "gemini-3.8-flash",
         )
 
         class GeminiModelWrapper:

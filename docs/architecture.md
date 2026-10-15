@@ -216,6 +216,46 @@ GET    /api/learning/badges/
 
 Save writes `PlaylistItem`. Personal-environment feed is not implemented.
 
+#### Flashcard card types
+
+Flashcard records carry a `card_type` field with three values:
+
+```text
+concept_visual  — question + explanation + visual hint + concept tags
+recall          — question with progressive answer reveal + optional key points
+quick_quiz      — multiple-choice question with correct-answer feedback
+
+quiz_options    — nullable JSON array; [{text, is_correct, explanation}]; quick_quiz cards only
+key_points      — nullable JSON array of strings; recall cards only
+visual_hint     — nullable char(100); short label or emoji; concept_visual cards only
+
+#### Mobile type layer (Phase 2)
+
+TypeScript types mirroring the serializer live in `mobile/src/types/flashcard.ts`:
+
+```text
+FlashcardDTO        — full serializer response shape
+FlashcardListResponse — plain array | paginated DRF envelope
+CardViewState       — per-card local UI state (reveal, quiz selection, save, understood)
+QuizOption          — one multiple-choice option ({text, is_correct, explanation})
+initialCardViewState(card) — factory function returning default CardViewState
+
+useFlashcardFeed()  — returns { cards, status, error, currentIndex, viewStates,
+                       onCardVisible, revealAnswer, selectOption,
+                       toggleSave, markUnderstood, refresh, sessionComplete }
+
+
+#### Card Template Architecture (Phase 3)
+Cards are modular and data-driven, located under `mobile/src/components/cards/`:
+```text
+CardShell          — Shared viewport container: top badges, middle content, bottom action bar
+ConceptVisualCard  — Question, visual icon/hint, explanation, verified claim quotation
+RecallCard         — Active-recall prompt with progressive tap-to-reveal answer and key points
+QuickQuizCard      — Multiple-choice options with immediate color-coded feedback & explanation
+CardRenderer       — Router component rendering the appropriate template based on card_type
+
+  
+
 ## Auth Architecture
 
 DRF defaults to authenticated APIs:
@@ -251,9 +291,7 @@ Authenticated users:
 - can submit feedback
 - can view their own progress
 
-Premium/contributor users:
-- can list their own uploaded notes
-- can view their own note details
+All authenticated users with a complete profile can list and view their own uploaded notes. Access remains owner-scoped. The premium/contributor gate will be enabled after the project presentation.
 
 Admins:
 - can manage source registry

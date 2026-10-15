@@ -26,6 +26,7 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     container_name: mosaic-backend
+    command: sh -c "python manage.py migrate && gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2 --threads 2"
     restart: unless-stopped
     ports:
       - "8000:8000"
@@ -48,7 +49,7 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     container_name: mosaic-worker
-    command: celery -A config worker --loglevel=INFO --concurrency=2
+    command: celery -A config worker --loglevel=INFO --concurrency=2 -Q ocr,embeddings,celery
     restart: unless-stopped
     environment:
       - DEBUG=True

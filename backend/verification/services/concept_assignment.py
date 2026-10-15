@@ -27,7 +27,7 @@ class ConceptAssignmentService:
         self.graph = get_cached_nx_graph()
         api_key = getattr(settings, "GEMINI_API_KEY", os.getenv("GEMINI_API_KEY", ""))
         self.client = genai.Client(api_key=api_key)
-        self.model_name = getattr(settings, "GEMINI_CLAIM_MODEL", "gemini-3.6-flash")
+        self.model_name = getattr(settings, "GEMINI_CLAIM_MODEL", "gemini-3.8-flash")
 
     def _find_anchor_nodes(self, text: str, max_anchors: int = 3):
         """Finds direct keywor matches in text against concept names."""

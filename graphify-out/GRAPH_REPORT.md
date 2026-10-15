@@ -1,64 +1,97 @@
-# Graph Report - Mosaic  (2026-10-12)
+# Graph Report - Mosaic  (2026-10-15)
 
 ## Corpus Check
-- 143 files · ~54,203 words
+- 188 files · ~101,238 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 9 file(s) not represented in the graph (top: (none) 7, .example 2)
 
 ## Summary
-- 799 nodes · 1719 edges · 64 communities (33 shown, 31 thin omitted)
-- Extraction: 87% EXTRACTED · 13% INFERRED · 0% AMBIGUOUS · INFERRED: 225 edges (avg confidence: 0.95)
+- 1196 nodes · 2246 edges · 98 communities (61 shown, 37 thin omitted)
+- Extraction: 89% EXTRACTED · 11% INFERRED · 0% AMBIGUOUS · INFERRED: 237 edges (avg confidence: 0.95)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `be8e3fae`
+- Built from commit: `c08b50e0`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- knowledge/models.py
+- notes/views.py
 - learning/views.py
 - users/views.py
 - learning.ts
 - knowledge/admin.py
-- dependencies
+- Neon
 - expo
 - django_conf
-- os
+- env
 - HybridOCRProvider
-- CanViewOwnNotes
+- flashcard.ts
 - django_apps
 - App Status
 - MOSAIC Architecture
 - compilerOptions
-- FlashcardAPITests
-- knowledge/views.py
+- Managed Better Auth: implement login
+- config/urls.py
 - PlaceholderOCRProvider
 - Docker Compose Configuration
-- scripts
+- Lakebase Postgres Branching
 - CSE Technology & Concept Knowledge Graph
 - Current State
-- GoogleAuthTests
-- learning/tests.py
-- EmbeddingService
-- verification/tests.py
+- AuthTests
+- Evidence
+- knowledge/views.py
+- Function Triggers
 - AGENTS.md
 - copilot-instructions.md
 - AGENTS.md
-- notes/views.py
-- django_contrib
+- NoteProcessingJob
+- knowledge/tests.py
 - Source
-- package.json
+- django_db
 - d_mosaic_backend_learning_services_py
-- auth.ts
-- notes.ts
-- ExtractedClaim
-- claim_extraction.py
-- factory.py
+- client.ts
 - RootNavigator.tsx
-- ._run_azure_fallback
-- manage.py
+- ExtractedClaim
+- 0007_canonicalclaim_claim_text_trgm_idx.py
+- verification/tests.py
+- Postgres Egress Optimizer
+- Neon AI Gateway
+- Neon Functions
+- Neon Object Storage
+- Sentry (errors, logs, and traces)
 - CLAUDE.md
+- Lakebase Postgres
+- Semantic Vector Search
+- Mastra agents with Mastra Studio observability
+- Shipping native binaries with a Function
+- Production hardening for Neon Functions
+- Server-sent events (SSE) on Neon Functions
+- hybrid-search.md
+- AI SDK agents on Neon Functions
+- Managing Lakebase Search with Drizzle
+- KnowledgeExplorerScreen.tsx
+- package.json
+- KnowledgeAPIPermissionTests
+- manage.py
+- MCP servers on Neon Functions
+- Full-Text Search with BM25 Ranking
+- Setup Flow
+- Troubleshooting and Neon-Specific Performance
+- WebSocket Servers
+- mobile/package.json
+- Logs: CLI, Loki, and SDK pagination
+- sdk.md
+- UserProfile
+- CanViewOwnNotes
+- Claimable Neon
+- NotePermissionTests
+- django_contrib
+- MasteryScreen.tsx
+- FeedScreen.tsx
+- FlashcardDetailScreen.tsx
+- ProfileAwareTokenObtainPairSerializer
+- neon/references/function-triggers.md
 
 ## God Nodes (most connected - your core abstractions)
 1. `Source` - 39 edges
@@ -66,23 +99,23 @@
 3. `ExtractedClaim` - 29 edges
 4. `Concept` - 29 edges
 5. `IngestionItem` - 28 edges
-6. `ClaimVerificationService` - 25 edges
+6. `ClaimVerificationService` - 26 edges
 7. `CanonicalClaim` - 24 edges
 8. `SourceDocument` - 23 edges
-9. `MasteryService` - 21 edges
-10. `FlashcardAPITests` - 21 edges
+9. `FlashcardAPITests` - 22 edges
+10. `MasteryService` - 21 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Mosaic CI/CD Workflow` --semantically_similar_to--> `Docker Compose Configuration`  [INFERRED] [semantically similar]
-  .github/workflows/ci-cd.yml → docker-compose.yml
-- `EvidenceInline` --uses--> `Evidence`  [INFERRED]
-  backend/knowledge/admin.py → backend/knowledge/models.py
-- `MOSAIC Project Report & Technical Architecture` --references--> `MOSAIC Architecture`  [EXTRACTED]
-  README.md → docs/architecture.md
-- `UnmappedConceptReviewAdmin` --uses--> `Concept`  [INFERRED]
-  backend/knowledge/admin.py → backend/knowledge/models.py
-- `ExternalIngestionPipeline` --uses--> `Evidence`  [INFERRED]
-  backend/knowledge/ingestion/pipeline.py → backend/knowledge/models.py
+- `5. Pass the creds via `neon.ts` (third-party env)` --references--> `env()`  [INFERRED]
+  .claude/skills/neon-functions/references/mastra-studio.md → backend/config/settings.py
+- `Option 1 — OAuth via the Better Auth MCP plugin (best for third-party clients)` --references--> `env()`  [INFERRED]
+  .claude/skills/neon-functions/references/mcp.md → backend/config/settings.py
+- `Standalone executables` --references--> `env()`  [INFERRED]
+  .claude/skills/neon-functions/references/native-binaries.md → backend/config/settings.py
+- `2. Provide the DSN as a deploy-time secret` --references--> `env()`  [INFERRED]
+  .claude/skills/neon-functions/references/sentry.md → backend/config/settings.py
+- `Other Node integrations` --references--> `env()`  [INFERRED]
+  .claude/skills/neon-functions/references/sentry.md → backend/config/settings.py
 
 ## Import Cycles
 - None detected.
@@ -91,31 +124,31 @@
 - **Knowledge Ingestion Pipeline** — backend_notes, backend_verification, backend_knowledge, backend_learning [EXTRACTED 1.00]
 - **MVP Technology Stack** — docker_compose, github_actions_ci, backend_users [EXTRACTED 1.00]
 
-## Communities (64 total, 31 thin omitted)
+## Communities (98 total, 37 thin omitted)
 
-### Community 0 - "knowledge/models.py"
-Cohesion: 0.14
-Nodes (13): Migration, Migration, Evidence, embed_evidence_task(), shared_task, Migration, Migration, Migration (+5 more)
+### Community 0 - "notes/views.py"
+Cohesion: 0.16
+Nodes (12): Meta, Note, Meta, NoteDetailSerializer, NoteUploadSerializer, enqueue_note_processing(), NoteDetailView, NoteListView (+4 more)
 
 ### Community 1 - "learning/views.py"
 Cohesion: 0.06
-Nodes (48): Concept, FlashcardAdmin, FlashcardFeedbackAdmin, PlaylistAdmin, PlaylistItemAdmin, PlaylistItemInline, register, UserProgressAdmin (+40 more)
+Nodes (46): Concept, FlashcardAdmin, FlashcardFeedbackAdmin, PlaylistAdmin, PlaylistItemAdmin, PlaylistItemInline, register, UserProgressAdmin (+38 more)
 
 ### Community 2 - "users/views.py"
-Cohesion: 0.05
-Nodes (38): URL configuration for config project. The `urlpatterns` list routes URLs to…, KnowledgeAPIPermissionTests, APITestCase, NotePermissionTests, APITestCase, UserProfile, CompleteProfileSerializer, GoogleAuthSerializer (+30 more)
+Cohesion: 0.13
+Nodes (16): CompleteProfileSerializer, GoogleAuthSerializer, CompleteProfileView, GoogleAuthView, HealthCheckView, jwt_response_for_user(), APIView, RegisterView (+8 more)
 
 ### Community 3 - "learning.ts"
-Cohesion: 0.23
-Nodes (14): createPlaylist(), getExplanation(), getFlashcardDetail(), getFlashcards(), getPlaylists(), saveFlashcard(), sendFeedback(), unsaveFlashcard() (+6 more)
+Cohesion: 0.25
+Nodes (14): createPlaylist(), getFlashcards(), getPlaylists(), getProgressSummary(), getUserBadges(), markFlashcardUnderstood(), saveFlashcard(), unsaveFlashcard() (+6 more)
 
 ### Community 4 - "knowledge/admin.py"
-Cohesion: 0.06
-Nodes (30): action, CanonicalClaimAdmin, ConceptAdmin, ConceptRelationshipAdmin, EvidenceAdmin, EvidenceInline, ExtractedClaimAdmin, register (+22 more)
+Cohesion: 0.05
+Nodes (34): action, ASGI config for config project. It exposes the ASGI callable as a module-level…, WSGI config for config project. It exposes the WSGI callable as a module-level…, CanonicalClaimAdmin, ConceptAdmin, ConceptRelationshipAdmin, EvidenceAdmin, EvidenceInline (+26 more)
 
-### Community 5 - "dependencies"
-Cohesion: 0.14
-Nodes (14): dependencies, axios, expo, expo-dev-client, expo-document-picker, expo-secure-store, expo-status-bar, react (+6 more)
+### Community 5 - "Neon"
+Cohesion: 0.05
+Nodes (36): Auth, 1. Install the Neon CLI, 2. Install the Neon MCP Server, 3. Install Neon Agent Skills, 4. Link Your Project and Get Started, Architecture: How to Use Neon, Backend Primitives, Bootstrap a New Project (+28 more)
 
 ### Community 6 - "expo"
 Cohesion: 0.06
@@ -125,17 +158,17 @@ Nodes (34): backgroundColor, backgroundImage, foregroundImage, monochromeImage, 
 Cohesion: 0.11
 Nodes (13): Migration, Migration, Migration, Migration, Migration, Migration, Migration, Migration (+5 more)
 
-### Community 8 - "os"
-Cohesion: 0.17
-Nodes (8): ASGI config for config project. It exposes the ASGI callable as a module-level…, WSGI config for config project. It exposes the WSGI callable as a module-level…, dj_database_url, django_core_asgi, django_core_wsgi, dotenv, os, pathlib
+### Community 8 - "env"
+Cohesion: 0.22
+Nodes (8): env(), Trusted app server, Application instrumentation, Built-in branch logs, Functions as an Agent Backend (Next.js and Similar Frameworks), Integrations and Observability, Neon Infrastructure as Code (`neon.ts`), Type-safe env vars with parseEnv
 
 ### Community 9 - "HybridOCRProvider"
-Cohesion: 0.28
-Nodes (4): HybridOCRProvider, Attempts OCR & visual analysis via Gemini-1.5-Flash. Falls back to Azure…, Dispatches to Text Parser, Document Parser, or Multimodal Image Parser and…, Extracts the absolute filesystem path from FieldFile or string.
+Cohesion: 0.12
+Nodes (13): OCRProvider, ABC, get_azure_client(), get_gemini_model(), HybridOCRProvider, Attempts OCR & visual analysis via Gemini-1.5-Flash. Falls back to Azure…, Dispatches to Text Parser, Document Parser, or Multimodal Image Parser and…, Extracts the absolute filesystem path from FieldFile or string. (+5 more)
 
-### Community 10 - "CanViewOwnNotes"
-Cohesion: 0.16
-Nodes (8): CanViewOwnNotes, BasePermission, Custom permission to allow users to view their own notes., Meta, NoteDetailSerializer, NoteDetailView, NoteListView, rest_framework_permissions
+### Community 10 - "flashcard.ts"
+Cohesion: 0.12
+Nodes (26): CardRendererProps, CardShell(), CardShellProps, formatCardType(), getDifficultyStyle(), getTypeBadgeStyle(), { height: WINDOW_HEIGHT }, styles (+18 more)
 
 ### Community 11 - "django_apps"
 Cohesion: 0.12
@@ -153,92 +186,204 @@ Nodes (8): Knowledge App, Learning App, Notes App, Users App, Verification App, 
 Cohesion: 0.29
 Nodes (6): compilerOptions, moduleResolution, paths, strict, extends, expo/tsconfig.base
 
-### Community 15 - "FlashcardAPITests"
-Cohesion: 0.15
-Nodes (3): FlashcardGenerationService, Generate flashcards from a given canonical claim., FlashcardAPITests
+### Community 15 - "Managed Better Auth: implement login"
+Cohesion: 0.08
+Nodes (23): Auth emails, Cross-subdomain vs bearer JWT, Data API identity, Environment, Managed Better Auth: implement login, Next.js, Organization invitations, Packages (+15 more)
 
-### Community 16 - "knowledge/views.py"
+### Community 16 - "config/urls.py"
+Cohesion: 0.33
+Nodes (5): URL configuration for config project. The `urlpatterns` list routes URLs to…, ProfileAwareTokenObtainPairView, django_conf_urls_static, rest_framework_simplejwt_views, TokenObtainPairView
+
+### Community 19 - "Lakebase Postgres Branching"
+Cohesion: 0.08
+Nodes (25): Beta Support Guidance (Mandatory), Branch Type Decision, Branching in CI/CD, CLI usage, Console and API usage, Create a Normal Branch (Preferred for Real-Data Migration Testing), Create a Schema-Only Branch (Beta, Sensitive Data), Example 1: Migration testing with realistic data (+17 more)
+
+### Community 36 - "AuthTests"
+Cohesion: 0.20
+Nodes (4): AuthTests, GoogleAuthTests, APITestCase, patch
+
+### Community 37 - "Evidence"
+Cohesion: 0.05
+Nodes (35): Any, build_embedding_text(), Command, BaseCommand, Migration, CanonicalClaim, Evidence, EmbeddingService (+27 more)
+
+### Community 38 - "knowledge/views.py"
 Cohesion: 0.20
 Nodes (13): CanonicalClaimSerializer, EvidenceSerializer, ExtractedClaimSerializer, Meta, SourceDocumentSerializer, SourceSerializer, CanonicalClaimViewSet, EvidenceViewSet (+5 more)
 
-### Community 19 - "scripts"
-Cohesion: 0.20
-Nodes (10): scripts, android, build:android:apk, build:preview, ios, lint, prebuild, start (+2 more)
+### Community 39 - "Function Triggers"
+Cohesion: 0.15
+Nodes (13): CLI, Delivery payload, Fields, Function Triggers, Inheritance, Local `neon dev`, Logs, MCP backup (+5 more)
 
-### Community 36 - "GoogleAuthTests"
-Cohesion: 0.22
-Nodes (4): AuthTests, GoogleAuthTests, APITestCase, patch
+### Community 50 - "NoteProcessingJob"
+Cohesion: 0.18
+Nodes (7): Command, BaseCommand, Meta, NoteProcessingJob, process_note_task(), shared_task, Asynchronously processes an uploaded note through OCR, claim extraction, and…
 
-### Community 37 - "learning/tests.py"
-Cohesion: 0.07
-Nodes (26): Any, Migration, CanonicalClaim, EvidenceRetrievalError, EvidenceRetrievalService, RuntimeError, Raised when semantic evidence retrieval cannot be completed., RuntimeError (+18 more)
-
-### Community 38 - "EmbeddingService"
-Cohesion: 0.16
-Nodes (9): build_embedding_text(), Command, BaseCommand, EmbeddingService, EmbeddingServiceError, RuntimeError, Raised when an embedding cannot be generated., EmbeddingServiceTests (+1 more)
-
-### Community 39 - "verification/tests.py"
-Cohesion: 0.16
-Nodes (11): SourceDocument, NoteProcessingService, atomic, ClaimVerificationServiceTests, NoteProcessJobIntegrationTests, patch, TestCase, test_embedding_task_skips_existing_embedding() (+3 more)
-
-### Community 50 - "notes/views.py"
-Cohesion: 0.13
-Nodes (13): Meta, Note, NoteUploadSerializer, NoteUploadView, NoteProcessingJobAdmin, register, Command, BaseCommand (+5 more)
-
-### Community 51 - "django_contrib"
-Cohesion: 0.40
-Nodes (3): NoteAdmin, register, django_contrib
+### Community 51 - "knowledge/tests.py"
+Cohesion: 0.44
+Nodes (6): django_contrib_auth_models, django_core_files_uploadedfile, django_test, rest_framework, rest_framework_test, unittest_mock
 
 ### Community 52 - "Source"
-Cohesion: 0.09
-Nodes (33): ArxivAdapter, Fetches academic computer science preprints from arXiv., GitHubAdapter, Fetches README and doc markdown from GitHub repositories., Fetches community discussion strictly for evidence attribution after legal…, RedditAdapter, Fetches high-quality answers from Stack Overflow or CSE Stack Exchange., StackExchangeAdapter (+25 more)
+Cohesion: 0.08
+Nodes (36): ArxivAdapter, Fetches academic computer science preprints from arXiv., GitHubAdapter, Fetches README and doc markdown from GitHub repositories., Fetches community discussion strictly for evidence attribution after legal…, RedditAdapter, Fetches high-quality answers from Stack Overflow or CSE Stack Exchange., StackExchangeAdapter (+28 more)
 
-### Community 53 - "package.json"
-Cohesion: 0.12
-Nodes (16): devDependencies, @types/react, typescript, main, name, private, version, expo-dev-client (+8 more)
+### Community 53 - "django_db"
+Cohesion: 0.17
+Nodes (7): Migration, Migration, Migration, Migration, Migration, django_db, django_utils
 
-### Community 55 - "auth.ts"
-Cohesion: 0.19
-Nodes (11): completeProfile(), login(), register(), apiClient, BASE_URL, configuredApiUrl, CustomAxiosRequestConfig, CompleteProfileScreen() (+3 more)
+### Community 55 - "client.ts"
+Cohesion: 0.18
+Nodes (12): completeProfile(), getProfile(), login(), register(), apiClient, BASE_URL, configuredApiUrl, CustomAxiosRequestConfig (+4 more)
 
-### Community 56 - "notes.ts"
-Cohesion: 0.29
-Nodes (8): getExtractedClaims(), getNoteStatus(), uploadNote(), verifyClaim(), ClaimReviewScreen(), ProcessingStatusScreen(), UploadNoteScreen(), expo-document-picker
+### Community 56 - "RootNavigator.tsx"
+Cohesion: 0.18
+Nodes (16): getExplanation(), getExtractedClaims(), getNotes(), getNoteStatus(), uploadNote(), verifyClaim(), Stack, Tab (+8 more)
 
 ### Community 57 - "ExtractedClaim"
-Cohesion: 0.29
-Nodes (4): ExtractedClaim, ClaimVerificationService, atomic, EvidenceRetrievalService
+Cohesion: 0.06
+Nodes (19): ExtractedClaim, FlashcardGenerationService, Generate flashcards from a given canonical claim., FlashcardAPITests, ClaimExtractionService, get_extractor_model(), ClaimVerificationService, atomic (+11 more)
 
-### Community 58 - "claim_extraction.py"
-Cohesion: 0.21
-Nodes (4): ClaimExtractionService, get_extractor_model(), google_genai, json
+### Community 58 - "0007_canonicalclaim_claim_text_trgm_idx.py"
+Cohesion: 0.50
+Nodes (3): Migration, django_contrib_postgres_indexes, django_contrib_postgres_operations
 
-### Community 59 - "factory.py"
+### Community 59 - "verification/tests.py"
+Cohesion: 0.20
+Nodes (9): NoteProcessingService, atomic, NoteProcessJobIntegrationTests, patch, TestCase, test_embedding_task_skips_existing_embedding(), test_embedding_task_stores_vector(), test_placeholder_evidence_queues_embedding_after_commit() (+1 more)
+
+### Community 60 - "Postgres Egress Optimizer"
+Cohesion: 0.12
+Nodes (16): Application-side aggregation, Check if pg_stat_statements is available, Diagnostic queries, Further Reading, Handle empty stats, High-frequency queries on static data, Interpret the results, JOIN duplication (+8 more)
+
+### Community 61 - "Neon AI Gateway"
+Cohesion: 0.12
+Nodes (15): Availability, Build Agents with Mastra (Recommended), Build Agents with the Vercel AI SDK (Recommended), Enabling the gateway: plan and model-catalog gating, Environment Variables, Further Reading, List Available Models at Runtime (`/v1/models`), Model Identifiers (+7 more)
+
+### Community 62 - "Neon Functions"
+Cohesion: 0.12
+Nodes (16): Architecture: Where Functions Fit, Availability, Connecting to Postgres, Develop Locally and Deploy, Function Triggers, Further Reading, MCP Servers, Native binaries and custom builds (+8 more)
+
+### Community 63 - "Neon Object Storage"
+Cohesion: 0.12
+Nodes (15): Architecture: Where Object Storage Fits, Availability, Built-in Branch Logs, CLI Bucket and Object Commands, Environment Variables, Further Reading, Neon Documentation, Neon Infrastructure as Code (`neon.ts`) (+7 more)
+
+### Community 64 - "Sentry (errors, logs, and traces)"
 Cohesion: 0.22
-Nodes (7): OCRProvider, ABC, get_gemini_model(), google_api_core, io, mimetypes, pil
+Nodes (9): 2. Provide the DSN as a deploy-time secret, 3. Create the request span and catch route errors, 4. Errors are for failures; logs are for the story, 5. Trace the agent itself, Environment variables, Other Node integrations, Sentry error monitoring on Neon Functions, Sentry (errors, logs, and traces) (+1 more)
 
-### Community 60 - "RootNavigator.tsx"
-Cohesion: 0.24
-Nodes (6): App(), styles, RootNavigator(), Stack, Tab, expo
+### Community 66 - "Lakebase Postgres"
+Cohesion: 0.15
+Nodes (13): Autoscaling, Branching, Connection Pooling, Gotchas, Instant Restore, IP Allow Lists, Lakebase Postgres, Lakebase Search (+5 more)
 
-### Community 64 - "manage.py"
+### Community 68 - "Semantic Vector Search"
+Cohesion: 0.22
+Nodes (9): Build the Index, Contents, Create the Extension, Prepare Embeddings, Query, Semantic Vector Search, Tune Search, Tune the Index (+1 more)
+
+### Community 69 - "Mastra agents with Mastra Studio observability"
+Cohesion: 0.25
+Nodes (8): 1. Define the agent against the Neon AI Gateway, 2. Wire observability to Mastra Studio, 3. Structured output through the gateway, 4. Create the Mastra project + token with the CLI, 5. Pass the creds via `neon.ts` (third-party env), 6. Verify, Further reading, Mastra agents with Mastra Studio observability
+
+### Community 70 - "Shipping native binaries with a Function"
+Cohesion: 0.25
+Nodes (7): `bundler: "none"`: ship a prebuilt directory, Custom `bundler`: return the file map, `externalPackages`: npm packages with a Node addon, Shipping native binaries with a Function, Size limits, Standalone executables, The runtime a binary lands on
+
+### Community 71 - "Production hardening for Neon Functions"
+Cohesion: 0.25
+Nodes (8): Choose the caller shape, Function Triggers only, Limit authenticated application work, Native URL, Preserve existing clients, Production hardening for Neon Functions, Public consumers through a Worker, Reject these
+
+### Community 72 - "Server-sent events (SSE) on Neon Functions"
+Cohesion: 0.25
+Nodes (7): Caveats, Client, Minimal SSE endpoint (no framework), Push to every client, across isolates, Server-sent events (SSE) on Neon Functions, Wire format (just text), With Hono
+
+### Community 73 - "hybrid-search.md"
+Cohesion: 0.43
+Nodes (3): Adapt the Hybrid Search, Hybrid Search, RRF Example
+
+### Community 74 - "AI SDK agents on Neon Functions"
+Cohesion: 0.29
+Nodes (7): 1. Declare the gateway and the function, 2. The handler: stream a tool-calling agent, 3. Generate images and persist them, 4. Call it directly from the client (don't proxy the stream), 5. Run and deploy, AI SDK agents on Neon Functions, Further reading
+
+### Community 75 - "Managing Lakebase Search with Drizzle"
+Cohesion: 0.29
+Nodes (7): BM25 Index, Config, Extensions, Managing Lakebase Search with Drizzle, Query, Schema, Tune Per Query
+
+### Community 76 - "KnowledgeExplorerScreen.tsx"
+Cohesion: 0.57
+Nodes (4): getCanonicalClaims(), getEvidenceList(), getSources(), KnowledgeExplorerScreen()
+
+### Community 77 - "package.json"
+Cohesion: 0.29
+Nodes (5): dependencies, @neon/config, @neon/env, @neon/config, @neon/env
+
+### Community 79 - "manage.py"
+Cohesion: 0.29
+Nodes (6): main(), Django's command-line utility for administrative tasks., Run administrative tasks., 1. Initialize before anything else, Environment Variables, sys
+
+### Community 80 - "MCP servers on Neon Functions"
+Cohesion: 0.33
+Nodes (6): Authenticating the server, MCP servers on Neon Functions, Option 1 — OAuth via the Better Auth MCP plugin (best for third-party clients), Option 2 — API key or session JWT via self-hosted Better Auth (simplest), Testing, The server
+
+### Community 81 - "Full-Text Search with BM25 Ranking"
+Cohesion: 0.33
+Nodes (6): Full-Text Search with BM25 Ranking, Prepare and Index Text, Query and Interpret Scores, Set Parameters at Build Time or Per Query, Set the Candidate Limit, Use Prefilter Selectively
+
+### Community 82 - "Setup Flow"
+Cohesion: 0.33
+Nodes (6): 1. Select the organization and project, 2. Get the connection string, 3. Pick the connection method and driver, 4. Set up the schema, Setup Flow, When to use pooled vs direct connections
+
+### Community 83 - "Troubleshooting and Neon-Specific Performance"
+Cohesion: 0.33
+Nodes (6): Choose CLI or MCP, Inspect Neon Cache Behavior Per Query, Interpret Results Safely, Performance Workflow, Pick the Diagnostic, Troubleshooting and Neon-Specific Performance
+
+### Community 84 - "WebSocket Servers"
+Cohesion: 0.50
+Nodes (4): Client must reconnect, Heartbeat (keep the socket alive), Keeping clients in sync across isolates (do not skip this), WebSocket Servers
+
+### Community 85 - "mobile/package.json"
+Cohesion: 0.05
+Nodes (44): App(), styles, dependencies, axios, expo, expo-dev-client, expo-document-picker, expo-secure-store (+36 more)
+
+### Community 88 - "UserProfile"
+Cohesion: 0.20
+Nodes (8): UserProfile, Meta, RegisterSerializer, create_user_profile(), django_db_models_signals, django_dispatch, profile, receiver
+
+### Community 92 - "CanViewOwnNotes"
+Cohesion: 0.33
+Nodes (4): CanViewOwnNotes, BasePermission, Custom permission to allow users to view their own notes., rest_framework_permissions
+
+### Community 94 - "Claimable Neon"
+Cohesion: 0.29
+Nodes (6): Claim, Claimable Neon, If neon claim is missing, Path, With REST, With the CLI
+
+### Community 97 - "django_contrib"
+Cohesion: 0.25
+Nodes (5): NoteAdmin, register, NoteProcessingJobAdmin, register, django_contrib
+
+### Community 98 - "MasteryScreen.tsx"
+Cohesion: 0.70
+Nodes (4): getMasteryStatus(), startQuestionnaire(), submitQuestionnaire(), MasteryScreen()
+
+### Community 99 - "FeedScreen.tsx"
 Cohesion: 0.40
-Nodes (4): main(), Django's command-line utility for administrative tasks., Run administrative tasks., sys
+Nodes (4): CardRenderer(), mobile_src_components_cards_index_cardrenderer, FeedScreen(), styles
+
+### Community 100 - "FlashcardDetailScreen.tsx"
+Cohesion: 0.83
+Nodes (3): getFlashcardDetail(), sendFeedback(), FlashcardDetailScreen()
 
 ## Knowledge Gaps
-- **113 isolated node(s):** `Migration`, `Migration`, `Migration`, `Migration`, `Migration` (+108 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 329 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **31 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **347 isolated node(s):** `Migration`, `Migration`, `Migration`, `Migration`, `Migration` (+342 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 579 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **37 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Source` connect `Source` to `knowledge/models.py`, `users/views.py`, `knowledge/admin.py`, `learning/tests.py`, `verification/tests.py`, `FlashcardAPITests`, `knowledge/views.py`, `notes/views.py`, `ExtractedClaim`?**
-  _High betweenness centrality (0.058) - this node is a cross-community bridge._
-- **Why does `Concept` connect `learning/views.py` to `knowledge/models.py`, `users/views.py`, `knowledge/admin.py`, `learning/tests.py`, `verification/tests.py`, `FlashcardAPITests`?**
-  _High betweenness centrality (0.038) - this node is a cross-community bridge._
-- **Why does `HybridOCRProvider` connect `HybridOCRProvider` to `notes/views.py`, `factory.py`, `._run_azure_fallback`, `verification/tests.py`?**
-  _High betweenness centrality (0.026) - this node is a cross-community bridge._
+- **Why does `env()` connect `env` to `Sentry (errors, logs, and traces)`, `knowledge/admin.py`, `Mastra agents with Mastra Studio observability`, `Shipping native binaries with a Function`, `MCP servers on Neon Functions`?**
+  _High betweenness centrality (0.063) - this node is a cross-community bridge._
+- **Why does `Neon Functions` connect `Neon Functions` to `env`, `neon-functions/SKILL.md`, `WebSocket Servers`, `manage.py`?**
+  _High betweenness centrality (0.040) - this node is a cross-community bridge._
+- **Why does `Source` connect `Source` to `knowledge/admin.py`, `Evidence`, `knowledge/views.py`, `KnowledgeAPIPermissionTests`, `knowledge/tests.py`, `django_db`, `ExtractedClaim`, `verification/tests.py`?**
+  _High betweenness centrality (0.027) - this node is a cross-community bridge._
 - **Are the 18 inferred relationships involving `Source` (e.g. with `ArxivAdapter` and `GitHubAdapter`) actually correct?**
   _`Source` has 18 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 16 inferred relationships involving `Evidence` (e.g. with `EvidenceInline` and `ExternalIngestionPipeline`) actually correct?**

@@ -95,6 +95,8 @@ class GoogleAuthTests(APITestCase):
         )
         self.assertEqual(res_success.status_code, status.HTTP_200_OK)
         self.assertTrue(res_success.data['profile_completed'])
+        self.assertIn('access', res_success.data)
+        self.assertIn('refresh', res_success.data)
         user.profile.refresh_from_db()
         self.assertTrue(user.profile.profile_completed)
 
@@ -112,6 +114,10 @@ class AuthTests(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(User.objects.filter(username='testuser').exists())
+        self.assertIn('access', response.data)
+        self.assertIn('refresh', response.data)
+        self.assertFalse(response.data['profile_completed'])
+        self.assertEqual(response.data['status'], 'profile_required')
 
     def test_user_can_login_and_receive_tokens(self):
         User.objects.create_user(
@@ -131,6 +137,30 @@ class AuthTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('access', response.data)
         self.assertIn('refresh', response.data)
+        self.assertFalse(response.data['profile_completed'])
+        self.assertEqual(response.data['status'], 'profile_required')
+
+    def test_login_reports_completed_profile_without_profile_get(self):
+        user = User.objects.create_user(
+            username='completeuser',
+            email='complete@example.com',
+            password='testpassword123',
+        )
+        user.profile.full_name = 'Complete User'
+        user.profile.education_level = 'Undergraduate'
+        user.profile.learning_goal = 'Learn algorithms'
+        user.profile.update_completion_status()
+
+        response = self.client.post(
+            '/api/auth/login/',
+            {'username': 'completeuser', 'password': 'testpassword123'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['profile_completed'])
+        self.assertEqual(response.data['status'], 'authenticated')
+        self.assertEqual(response.data['profile']['full_name'], 'Complete User')
 
     def test_invalid_login_fails(self):
         response = self.client.post(

@@ -1,10 +1,16 @@
+import json
+import logging
 from decimal import Decimal
+from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
+from google import genai
+from google.genai import types
 from knowledge.models import CanonicalClaim, ExtractedClaim, Concept, Evidence
 from .evidence_retrieval import EvidenceRetrievalService
 from learning.services.flashcard_service import FlashcardGenerationService
 
+logger = logging.getLogger(__name__)
 class ClaimVerificationService:
     def __init__(self):
         self.evidence_retriever = EvidenceRetrievalService()
@@ -18,6 +24,14 @@ class ClaimVerificationService:
 
         status, confidence, notes = self._decide_status(evidence_items)
 
+        corrected_canonical_text = extracted_claim.text
+        if status in (ExtractedClaim.STATUS_UNCERTAIN, ExtractedClaim.STATUS_PARTIALLY_SUPPORTED):
+            llm_result = self._verify_with_gemini(extracted_claim.text)
+            if llm_result.get("status") == ExtractedClaim.STATUS_SUPPORTED:
+                status = ExtractedClaim.STATUS_SUPPORTED
+                confidence = llm_result.get("confidence", confidence)
+                notes = f"LLM Fact-Check: {llm_result.get('notes', '')}"
+                corrected_canonical_text = llm_result.get("corrected_text", extracted_claim.text)
         extracted_claim.status = status
         extracted_claim.confidence = confidence
         extracted_claim.reviewed_at = timezone.now()
@@ -46,6 +60,42 @@ class ClaimVerificationService:
             "evidence": evidence_items,
             "flashcard": flashcard,
         }
+
+    def _verify_with_gemini(self, claim_text: str) -> dict:
+        api_key = getattr(settings, "GEMINI_API_KEY", "")
+        if not api_key:
+            return {"status": ExtractedClaim.STATUS_UNCERTAIN}
+        client = genai.Client(api_key=api_key)
+        prompt = f"""You are a Computer Science expert fact-checker. Evaluate this statement extracted from university notes:
+Statement: "{claim_text}"
+1. Is this claim factually and technically correct in Computer Science?
+2. If true, status is "SUPPORTED". If factually wrong, "CONTRADICTED".
+3. Provide the clean, precise canonical form of this statement in "corrected_text".
+4. Assign a confidence score from 0.00 to 1.00.
+Output strict JSON:
+{{
+  "status": "SUPPORTED",
+  "confidence": 0.95,
+  "corrected_text": "...",
+  "explanation": "..."
+}}
+"""
+        try:
+            response = client.models.generate_content(
+                model=getattr(settings, "GEMINI_CLAIM_MODEL", "gemini-3.8-flash"),
+                contents=prompt,
+                config=types.GenerateContentConfig(response_mime_type="application/json", temperature=0.1),
+            )
+            data = json.loads(response.text)
+            return {
+                "status": ExtractedClaim.STATUS_SUPPORTED if data.get("status") == "SUPPORTED" else ExtractedClaim.STATUS_CONTRADICTED,
+                "confidence": Decimal(str(min(max(float(data.get("confidence", 0.85)), 0.0), 1.0))).quantize(Decimal("0.01")),
+                "corrected_text": data.get("corrected_text", claim_text),
+                "notes": data.get("explanation", ""),
+            }
+        except Exception as e:
+            logger.warning("Gemini claim verification failed: %s", e)
+            return {"status": ExtractedClaim.STATUS_UNCERTAIN}
 
     def _score_evidence(self, evidence_items, relation):
         matching = [
@@ -122,22 +172,23 @@ class ClaimVerificationService:
         max_strength = max(supporting_strength, contradicting_strength, Decimal("0.10"))
         return ExtractedClaim.STATUS_UNCERTAIN, max_strength.quantize(Decimal("0.01")), notes
 
-    def create_canonical_claim(self, extracted_claim: ExtractedClaim, confidence):
+    def create_canonical_claim(self, extracted_claim: ExtractedClaim, confidence, text_override=None):
         from verification.services.concept_assignment import ConceptAssignmentService
         assignment_service = ConceptAssignmentService()
         concept = assignment_service.assign_concept(
-            claim_text=extracted_claim.text,
+            claim_text=text_override or extracted_claim.text,
             source_claim=extracted_claim,
         )
-
         canonical_claim, _ = CanonicalClaim.objects.get_or_create(
-            source_claim = extracted_claim,
+            source_claim=extracted_claim,
             defaults={
                 "concept": concept,
-                "text": extracted_claim.text,
+                "text": text_override or extracted_claim.text,
                 "confidence": confidence,
                 "is_active": True,
                 "created_by_ai": False,
             },
         )
         return canonical_claim
+
+  

@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.db import transaction
 from django.utils import timezone
 from knowledge.ingestion.base import IngestionItem
@@ -79,6 +81,18 @@ class ExternalIngestionPipeline:
                 source_document=document,
                 text=text,
             )
+            if item.authority_score >= Decimal("0.70"):
+                evidence = Evidence.objects.create(
+                    claim=claim,
+                    source=source,
+                    relation=Evidence.SUPPORTS,
+                    title=item.title,
+                    url=item.url,
+                    excerpt=item.raw_text[:1000],
+                    relevance_score=Decimal("0.90"),
+                )
+                transaction.on_commit(lambda eid=evidence.id: embed_evidence_task.delay(eid))
+                    
             created_claims.append(claim)
 
         verification_results = []

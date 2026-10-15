@@ -5,6 +5,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 from django.contrib.auth.models import User
+from unittest.mock import patch
 
 from .services.rag_explanation import RAGExplanationService, RAGExplanationServiceError
 from knowledge.models import CanonicalClaim, Concept, Evidence, Source, ExtractedClaim, SourceDocument
@@ -43,7 +44,15 @@ class FlashcardAPITests(APITestCase):
             source_claim=self.extracted,
             is_active=True,
         )
-        self.flashcard = FlashcardGenerationService().generate_from_canonical_claim(self.canonical)
+        generated_copy = {
+            "title": "Breadth First Search",
+            "prompt": "Why does BFS use a queue?",
+            "answer": "To visit nodes level by level.",
+            "explanation": "This flashcard was generated from a canonical claim.",
+            "difficulty": Flashcard.DIFFICULTY_BEGINNER,
+        }
+        with patch.object(FlashcardGenerationService, "_generate_copy", return_value=generated_copy):
+            self.flashcard = FlashcardGenerationService().generate_from_canonical_claim(self.canonical)
         self.client.force_authenticate(user=self.user)
 
     def test_generator_sets_canonical_claim(self):

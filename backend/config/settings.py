@@ -17,7 +17,8 @@ from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv(BASE_DIR / '.env', override=True)  # Load environment variables from .env file
+# Local .env values are defaults; container/service environment must take precedence.
+load_dotenv(BASE_DIR / '.env', override=False)
 
 def env(name, default=""):
     value = os.getenv(name)
@@ -53,8 +54,8 @@ AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT = env("AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT
 AZURE_DOCUMENT_INTELLIGENCE_KEY = env("AZURE_DOCUMENT_INTELLIGENCE_KEY", "")
 
 GEMINI_API_KEY = env("GEMINI_API_KEY", "")  # Default to empty string if not set
-GEMINI_CLAIM_MODEL = env("GEMINI_CLAIM_MODEL", "gemini-3.6-flash")
-GEMINI_OCR_MODEL = env("GEMINI_OCR_MODEL", "gemini-3.6-flash")
+GEMINI_CLAIM_MODEL = env("GEMINI_CLAIM_MODEL", "gemini-3.8-flash")
+GEMINI_OCR_MODEL = env("GEMINI_OCR_MODEL", "gemini-3.8-flash")
 GOOGLE_OAUTH_CLIENT_ID = env("GOOGLE_OAUTH_CLIENT_ID", "")
 GEMINI_EMBEDDING_MODEL = env("GEMINI_EMBEDDING_MODEL", "gemini-embedding-001")
 

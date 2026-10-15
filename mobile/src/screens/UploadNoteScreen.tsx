@@ -11,20 +11,23 @@ export default function UploadNoteScreen({ navigation }: any) {
     const [loading, setLoading] = useState(false);
 
     const pickFile = async () => {
-        const res = await DocumentPicker.getDocumentAsync({ type: '*/*' });
+        const res = await DocumentPicker.getDocumentAsync({
+            type: '*/*',
+            copyToCacheDirectory: true,
+        });
         if (!res.canceled && res.assets && res.assets.length > 0) {
             setFile(res.assets[0]);
         }
     };
 
     const handleUpload = async () => {
-        if (!title || !file) {
+        if (!title.trim() || !file) {
             return Alert.alert('Validation', 'Please provide a title and pick a file.');
         }
         setLoading(true);
         try {
-            const data = await uploadNote(title, file.uri, file.name, file.mimeType || 'text/plain');
-            Alert.alert('Uploaded', 'Note ID: ${data.id}');
+            const data = await uploadNote(title.trim(), file.uri, file.name, file.mimeType || 'text/plain');
+            Alert.alert('Uploaded', `Note ID: ${data.id}`);
             navigation.navigate('ProcessingStatus', { noteId: data.id });
         } catch (error: any) {
             Alert.alert('Upload Error', JSON.stringify(error.response?.data || error.message));

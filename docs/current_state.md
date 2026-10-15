@@ -16,7 +16,7 @@ users, notes, knowledge, verification, learning apps
 Email/password register + login + token refresh
 Google auth endpoint + complete-profile endpoint
 Note upload (all authenticated users)
-Gated note list/detail (can_view_own_notes)
+Owner-only note list/detail for all profile-complete users (premium gate planned after project presentation)
 NoteProcessingJob + synchronous process_note_placeholder after upload
 Hybrid OCR (Gemini primary, Azure fallback, placeholder if no keys)
 LLM/fallback claim extraction
@@ -102,8 +102,7 @@ Access:
 
 ```text
 Any authenticated user can upload.
-Only users with profile.can_view_own_notes can list/detail their notes.
-That flag stays gated until a later reward/contributor system.
+All profile-complete users can list/detail their own notes. Other users' notes remain inaccessible. Enable `can_view_own_notes` after the project presentation when premium access is introduced.
 ```
 
 Still needed:

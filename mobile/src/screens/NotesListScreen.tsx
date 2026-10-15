@@ -1,31 +1,38 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, Button, ActivityIndicator } from 'react-native';
 import { getNotes } from '../api/notes';
 
 export default function NotesListScreen({ navigation }: any) {
     const [notes, setNotes] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    const load = async () => {
+    const load = useCallback(async () => {
         setLoading(true);
+        setError(null);
         try {
             const data = await getNotes();
             setNotes(Array.isArray(data) ? data : data.results || []);
         } catch (err: any) {
-            alert(err.message || 'Failed to fetch notes');
+            setError(err.response?.data?.detail || err.message || 'Failed to fetch notes.');
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
         load();
-    }, []);
+    }, [load]);
 
     return (
         <View style={{ flex: 1, padding: 16 }}>
             <Button title="Refresh Notes" onPress={load} />
             {loading ? <ActivityIndicator size="large" style={{ marginTop: 20 }} /> : (
+                error ? (
+                    <View style={{ padding: 16 }}>
+                        <Text style={{ color: '#991b1b', textAlign: 'center' }}>{error}</Text>
+                    </View>
+                ) : (
                 <FlatList
                     data={notes}
                     keyExtractor={(item) => item.id.toString()}
@@ -40,6 +47,7 @@ export default function NotesListScreen({ navigation }: any) {
                     )}
                     ListEmptyComponent={<Text style={{ marginTop: 20, textAlign: 'center' }}>No notes found.</Text>}
                 />
+                )
             )}
         </View>
     );

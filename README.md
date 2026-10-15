@@ -95,23 +95,29 @@ Production Gemini/Google/Azure values stay on the Render Environment tab only.
 
 ### Option A — recommended (edit and run Django on the machine)
 
-From the **repo root** (`Mosaic`), start only the database:
+From the **repo root** (`Mosaic`), start Postgres and Redis:
 
 ```powershell
-docker compose up db -d
+docker compose up db redis -d
 ```
 
-From `Mosaic\backend` with the venv active:
+From `Mosaic\backend` with the venv active, run migrations and start a Celery worker in one terminal:
 
 ```powershell
 python manage.py migrate
 python manage.py createsuperuser
+celery -A config worker --loglevel=INFO --concurrency=2 -Q ocr,embeddings,celery
+```
+
+In a second `Mosaic\backend` terminal with the same venv active, start the API:
+
+```powershell
 python manage.py runserver
 ```
 
 Admin: http://127.0.0.1:8000/admin/
 
-Later DB start: `docker compose up db -d`. Stop API with Ctrl+C. Stop DB with `docker compose stop db` from the repo root.
+Later start: `docker compose up db redis -d`. Stop the API and worker with Ctrl+C. Stop Postgres and Redis with `docker compose stop db redis` from the repo root. The worker must consume the `ocr` queue for uploaded notes to process.
 
 ### Option B — Docker only
 
