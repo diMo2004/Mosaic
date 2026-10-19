@@ -1,6 +1,6 @@
 // Location: mobile/src/screens/ProgressScreen.tsx
 import React, { useEffect, useState } from 'react';
-import { View, Text, Button, FlatList, ActivityIndicator, TextInput } from 'react-native';
+import { View, Text, FlatList, ActivityIndicator, TextInput, Pressable } from 'react-native';
 import { getProgressSummary, getUserBadges } from '../api/learning';
 
 export default function ProgressScreen({ navigation }: any) {
@@ -28,48 +28,45 @@ export default function ProgressScreen({ navigation }: any) {
     }, []);
 
     return (
-        <View style={{ flex: 1, padding: 16 }}>
-            <Button title="Refresh Progress & Badges" onPress={loadData} />
-            {loading ? <ActivityIndicator size="large" style={{ marginTop: 20 }} /> : (
-                <View style={{ flex: 1 }}>
+        <View className="flex-1 bg-canvas p-5">
+            <Pressable onPress={loadData} className="mb-4 items-center rounded-xl bg-sky-500 py-3"><Text className="font-bold text-slate-950">Refresh progress & badges</Text></Pressable>
+            {loading ? <ActivityIndicator size="large" color="#38bdf8" /> : (
+                <View className="flex-1">
                     {summary && (
-                        <View style={{ marginVertical: 12, padding: 12, backgroundColor: '#f5f5f5' }}>
-                            <Text>Total Viewed: {summary.total_flashcards_viewed}</Text>
-                            <Text>Total Views: {summary.total_views}</Text>
-                            <Text>Understood Count: {summary.understood_count}</Text>
-                            <Text>Saved Cards: {summary.saved_count}</Text>
+                        <View className="my-3 rounded-xl border border-slate-800 bg-panel p-4">
+                            <Text className="text-slate-200">Total viewed: {summary.total_flashcards_viewed}</Text>
+                            <Text className="text-slate-200">Total views: {summary.total_views}</Text>
+                            <Text className="text-slate-200">Understood: {summary.understood_count}</Text>
+                            <Text className="text-slate-200">Saved cards: {summary.saved_count}</Text>
                         </View>
                     )}
 
-                    <View style={{ marginVertical: 12 }}>
-                        <Text style={{ fontWeight: 'bold' }}>Test Concept Mastery:</Text>
+                    <View className="my-3">
+                        <Text className="font-bold text-slate-100">Test concept mastery</Text>
                         <TextInput
-                            placeholder="Enter Concept ID (e.g. 1)"
+                            placeholder="Enter concept ID" placeholderTextColor="#64748b"
                             value={conceptIdInput}
                             onChangeText={setConceptIdInput}
                             keyboardType="numeric"
-                            style={{ borderWidth: 1, borderColor: '#ccc', padding: 8, marginVertical: 8 }}
+                            className="my-2 rounded-xl border border-slate-700 bg-slate-900 px-3 py-3 text-slate-50"
                         />
-                        <Button
-                            title="Go to Mastery & Questionnaire"
-                            onPress={() => {
+                        <Pressable onPress={() => {
                                 if (!conceptIdInput) return alert('Enter a concept ID');
                                 navigation.navigate('Mastery', { conceptId: Number(conceptIdInput) });
-                            }}
-                        />
+                            }} className="items-center rounded-xl border border-sky-700 py-3"><Text className="font-semibold text-sky-300">Open mastery questionnaire</Text></Pressable>
                     </View>
 
-                    <Text style={{ fontWeight: 'bold', marginTop: 16 }}>Earned Badges:</Text>
+                    <Text className="mt-4 font-bold text-slate-100">Earned badges</Text>
                     <FlatList
                         data={badges}
                         keyExtractor={(item) => item.id.toString()}
                         renderItem={({ item }) => (
-                            <View style={{ padding: 8, borderBottomWidth: 1, borderColor: '#ddd' }}>
-                                <Text>🏅 {item.concept_name} {item.is_superset ? '(SUPERSET)' : ''}</Text>
-                                <Text style={{ fontSize: 12, color: '#666' }}>Awarded: {item.completion_date}</Text>
+                            <View className="border-b border-slate-800 py-3">
+                                <Text className="text-slate-100">🏅 {item.concept_name} {item.is_superset ? '(SUPERSET)' : ''}</Text>
+                                <Text className="text-xs text-slate-400">Awarded: {item.completion_date}</Text>
                             </View>
                         )}
-                        ListEmptyComponent={<Text>No badges earned yet.</Text>}
+                        ListEmptyComponent={<Text className="text-slate-400">No badges earned yet.</Text>}
                     />
                 </View>
             )}

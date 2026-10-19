@@ -67,6 +67,7 @@ class Flashcard(models.Model):
         blank=True,
         help_text='Short label or emoji for concept_visual diagram area',
     )
+    card_metadata_version = models.PositiveSmallIntegerField(default=0, editable=False)
     class Meta:
         ordering = ['-created_at']
 
@@ -189,6 +190,40 @@ class UserProgress(models.Model):
 
     def __str__(self):
         return f"{self.user.user_id} progress on {self.flashcard_id}"
+
+
+class FlashcardFeedEvent(models.Model):
+    """Durable feed delivery history used to avoid immediate repetition."""
+
+    EVENT_SERVED = "served"
+    EVENT_VIEWED = "viewed"
+    EVENT_CHOICES = [
+        (EVENT_SERVED, "Served"),
+        (EVENT_VIEWED, "Viewed"),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="flashcard_feed_events",
+    )
+    flashcard = models.ForeignKey(
+        Flashcard,
+        on_delete=models.CASCADE,
+        related_name="feed_events",
+    )
+    session_id = models.UUIDField(db_index=True)
+    event_type = models.CharField(max_length=12, choices=EVENT_CHOICES)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["user", "session_id", "flashcard"]),
+            models.Index(fields=["user", "created_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.event_type}: {self.user_id}/{self.flashcard_id}"
 
 class Questionnaire(models.Model):
     TIER_EASY = 1

@@ -1,9 +1,17 @@
 // Feed, detail, save/unsave playlist, feedback, explain
 import {apiClient} from './client';
-import type { FlashcardDTO, FlashcardListResponse } from '@/types/flashcard';
+import type { FlashcardDTO, FlashcardListResponse, TopicSearchResponse } from '@/types/flashcard';
 
-export const getFlashcards = async (): Promise<FlashcardListResponse> => {
-    return (await apiClient.get<FlashcardListResponse>('/api/learning/flashcards/')).data;
+export const getFlashcards = async (sessionId?: string): Promise<FlashcardListResponse> => {
+    return (await apiClient.get<FlashcardListResponse>('/api/learning/flashcards/', {
+        params: sessionId ? { session_id: sessionId } : undefined,
+    })).data;
+};
+
+export const searchFlashcardsByTopic = async (topic: string): Promise<TopicSearchResponse> => {
+    return (await apiClient.get<TopicSearchResponse>('/api/learning/search/', {
+        params: { topic },
+    })).data;
 };
 
 export const getFlashcardDetail = async (id: number): Promise<FlashcardDTO> => {
@@ -12,7 +20,11 @@ export const getFlashcardDetail = async (id: number): Promise<FlashcardDTO> => {
 
 export const getPlaylists = async () => {
     return (await apiClient.get('/api/learning/playlists/')).data;
-}
+};
+
+export const getPlaylistDetail = async (id: number) => {
+    return (await apiClient.get(`/api/learning/playlists/${id}/`)).data;
+};
 
 export const createPlaylist = async (name: string) => {
     return (await apiClient.post('/api/learning/playlists/', {name})).data;
@@ -39,11 +51,22 @@ export const sendFeedback = async (flashcardId: number, feedbackType: 'like' | '
 };
 
 export const getExplanation = async (canonicalClaimId: number) => {
-    return (await apiClient.get(`/api/learning/canonical-claims/${canonicalClaimId}/explain/`)).data;
+    // This endpoint makes a grounded Gemini request and can legitimately take
+    // longer than the short timeout used by interactive API operations.
+    return (await apiClient.get(
+        `/api/learning/canonical-claims/${canonicalClaimId}/explain/`,
+        { timeout: 120000 },
+    )).data;
 };
 
 export const markFlashcardUnderstood = async (flashcardId: number, understood: boolean = true) => {
     return (await apiClient.post(`/api/learning/flashcards/${flashcardId}/understood/`, { understood
+    })).data;
+};
+
+export const recordFlashcardView = async (flashcardId: number, sessionId?: string) => {
+    return (await apiClient.post(`/api/learning/flashcards/${flashcardId}/viewed/`, {
+        session_id: sessionId,
     })).data;
 };
 

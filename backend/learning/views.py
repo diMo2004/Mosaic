@@ -1,11 +1,13 @@
 from django.shortcuts import render
 from django.shortcuts import get_object_or_404
-from django.db.models import Count,Sum
+from django.db.models import Count, F, Q, Sum
 from django.utils import timezone
+from datetime import datetime, timedelta, timezone as datetime_timezone
+from uuid import UUID, uuid4
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .models import Flashcard, FlashcardFeedback, Playlist, PlaylistItem, UserProgress, MasteryBadge, Questionnaire
+from .models import Flashcard, FlashcardFeedEvent, FlashcardFeedback, Playlist, PlaylistItem, UserProgress, MasteryBadge, Questionnaire
 from .serializers import FlashcardSerializer, FlashcardFeedbackSerializer, PlaylistDetailSerializer, PlaylistSerializer, MasteryBadgeSerializer, QuestionnaireQuestionClientSerializer, QuestionnaireQuestionReviewSerializer
 from knowledge.models import CanonicalClaim, Concept
 from .services.rag_explanation import RAGExplanationServiceError
@@ -27,6 +29,147 @@ class FlashcardFeedView(generics.ListAPIView):
 
     def get_queryset(self):
         return active_flashcards()
+
+    def list(self, request, *args, **kwargs):
+        """Return a fresh, server-ranked batch without session repetition."""
+        raw_session_id = request.query_params.get("session_id")
+        try:
+            session_id = UUID(raw_session_id) if raw_session_id else uuid4()
+        except (TypeError, ValueError):
+            session_id = uuid4()
+
+        try:
+            limit = min(max(int(request.query_params.get("limit", 20)), 1), 50)
+        except ValueError:
+            limit = 20
+
+        served_ids = set(
+            FlashcardFeedEvent.objects.filter(
+                user=request.user,
+                session_id=session_id,
+            ).values_list("flashcard_id", flat=True)
+        )
+        candidates = list(active_flashcards().exclude(id__in=served_ids))
+        if not candidates:
+            return Response({
+                "results": [],
+                "session_id": str(session_id),
+                "session_exhausted": True,
+            })
+
+        recent_cutoff = timezone.now() - timedelta(days=7)
+        progress = {
+            item.flashcard_id: item
+            for item in UserProgress.objects.filter(
+                user=request.user,
+                flashcard_id__in=[card.id for card in candidates],
+            )
+        }
+
+        # Unseen cards lead; previously viewed cards follow from least-recently seen.
+        candidates.sort(key=lambda card: (
+            1 if progress.get(card.id) and progress[card.id].last_viewed_at and progress[card.id].last_viewed_at >= recent_cutoff else 0,
+            progress[card.id].last_viewed_at if progress.get(card.id) and progress[card.id].last_viewed_at else datetime.min.replace(tzinfo=datetime_timezone.utc),
+            card.id,
+        ))
+        selected = candidates[:limit]
+        FlashcardFeedEvent.objects.bulk_create([
+            FlashcardFeedEvent(
+                user=request.user,
+                flashcard=card,
+                session_id=session_id,
+                event_type=FlashcardFeedEvent.EVENT_SERVED,
+            )
+            for card in selected
+        ])
+        return Response({
+            "results": self.get_serializer(selected, many=True).data,
+            "session_id": str(session_id),
+            "session_exhausted": len(selected) == len(candidates),
+        })
+
+
+class TopicSearchView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsProfileComplete]
+
+    def get(self, request):
+        import difflib
+        query = " ".join(request.query_params.get("topic", "").split())
+        if not query:
+            return Response({"detail": "A topic query is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 1. Exact match (case-insensitive)
+        exact = Concept.objects.filter(name__iexact=query).first()
+        if exact:
+            cards = active_flashcards().filter(source_claim__concept=exact)
+            return Response({
+                "query": query,
+                "taxonomy_match": {
+                    "found": True,
+                    "confidence": 1.0,
+                    "match_type": "exact",
+                    "concept_id": exact.id,
+                    "name": exact.name,
+                },
+                "suggestions": [{"concept_id": exact.id, "name": exact.name, "score": 1.0}],
+                "results": FlashcardSerializer(cards[:30], many=True, context={"request": request}).data,
+            })
+
+        # 2. Substring & Trigram/Fuzzy matching
+        all_concepts = list(Concept.objects.values("id", "name", "slug"))
+        scored = []
+        normalized_query = query.lower()
+        for c in all_concepts:
+            c_name_lower = c["name"].lower()
+            ratio = difflib.SequenceMatcher(None, normalized_query, c_name_lower).ratio()
+            # Boost if substring match
+            if normalized_query in c_name_lower:
+                ratio = max(ratio, 0.85)
+            if ratio >= 0.35:
+                scored.append((ratio, c))
+
+        scored.sort(key=lambda x: x[0], reverse=True)
+        top_matches = scored[:5]
+
+        if top_matches:
+            best_score, best_concept_dict = top_matches[0]
+            target_id = best_concept_dict["id"]
+            target_name = best_concept_dict["name"]
+            is_confident = best_score >= 0.70
+
+            cards = active_flashcards().filter(source_claim__concept_id=target_id)
+            suggestions = [
+                {"concept_id": item[1]["id"], "name": item[1]["name"], "score": round(item[0], 2)}
+                for item in top_matches
+            ]
+
+            return Response({
+                "query": query,
+                "taxonomy_match": {
+                    "found": is_confident,
+                    "confidence": round(best_score, 2),
+                    "match_type": "fuzzy" if is_confident else "none",
+                    "concept_id": target_id,
+                    "name": target_name,
+                },
+                "suggestions": suggestions,
+                "results": FlashcardSerializer(cards[:30], many=True, context={"request": request}).data,
+            })
+
+        # 3. No match found
+        return Response({
+            "query": query,
+            "taxonomy_match": {
+                "found": False,
+                "confidence": 0.0,
+                "match_type": "none",
+                "concept_id": None,
+                "name": None,
+            },
+            "suggestions": [],
+            "results": [],
+        })
+
     
 class FlashcardDetailView(generics.RetrieveAPIView):
     serializer_class = FlashcardSerializer
@@ -37,15 +180,49 @@ class FlashcardDetailView(generics.RetrieveAPIView):
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
-        progress, _ = UserProgress.objects.get_or_create(
-            user=request.user,
-            flashcard=instance,
-        )
-        progress.view_count += 1
-        progress.last_viewed_at = timezone.now()
-        progress.save(update_fields=['view_count', 'last_viewed_at', 'updated_at'])
+        record_flashcard_view(request.user, instance)
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
+
+
+def record_flashcard_view(user, flashcard):
+    now = timezone.now()
+    UserProgress.objects.get_or_create(user=user, flashcard=flashcard)
+    UserProgress.objects.filter(user=user, flashcard=flashcard).update(
+        view_count=F("view_count") + 1,
+        last_viewed_at=now,
+        updated_at=now,
+    )
+
+
+class FlashcardViewedView(APIView):
+    """Record a card impression from the paged feed."""
+
+    permission_classes = [permissions.IsAuthenticated, IsProfileComplete]
+
+    def post(self, request, pk):
+        flashcard = get_object_or_404(active_flashcards(), pk=pk)
+        record_flashcard_view(request.user, flashcard)
+        try:
+            session_id = UUID(request.data.get("session_id"))
+        except (TypeError, ValueError):
+            session_id = None
+        if session_id:
+            FlashcardFeedEvent.objects.get_or_create(
+                user=request.user,
+                flashcard=flashcard,
+                session_id=session_id,
+                event_type=FlashcardFeedEvent.EVENT_VIEWED,
+            )
+        progress = UserProgress.objects.get(user=request.user, flashcard=flashcard)
+        return Response(
+            {
+                "flashcard_id": flashcard.id,
+                "view_count": progress.view_count,
+                "last_viewed_at": progress.last_viewed_at,
+            },
+            status=status.HTTP_200_OK,
+        )
 
 class SaveFlashCardView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsProfileComplete]

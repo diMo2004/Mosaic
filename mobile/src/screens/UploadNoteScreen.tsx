@@ -1,9 +1,10 @@
 // DocumentPicker upload
 // Sends multipart file and title. Redirects to ProcessingStatusScreen.
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, Alert } from 'react-native';
+import { View, Text, TextInput, Alert, Pressable } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { uploadNote } from '@/api/notes';
+import { ScreenHeader } from '@/components/ScreenHeader';
 
 export default function UploadNoteScreen({ navigation }: any) {
     const [title, setTitle] = useState('');
@@ -37,18 +38,18 @@ export default function UploadNoteScreen({ navigation }: any) {
     };
 
     return (
-    <View style={{ padding: 20 }}>
-      <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>Upload Note</Text>
+    <View className="flex-1 bg-canvas"><ScreenHeader title="Upload" navigation={navigation} /><View className="p-5">
+      <Text className="mb-3 text-xl font-bold text-slate-50">Upload a note</Text>
       <TextInput
-        placeholder="Note Title"
+        placeholder="Note title" placeholderTextColor="#64748b"
         value={title}
         onChangeText={setTitle}
-        style={{ borderWidth: 1, padding: 8, marginBottom: 10 }}
+        className="mb-3 rounded-xl border border-slate-700 bg-slate-900 px-3 py-3 text-base text-slate-50"
       />
-      <Button title={file ? `File: ${file.name}` : 'Pick Document'} onPress={pickFile} />
-      <View style={{ marginTop: 15 }}>
-        <Button title={loading ? 'Uploading...' : 'Submit Note'} onPress={handleUpload} disabled={loading} />
+      <Pressable onPress={pickFile} className="items-center rounded-xl border border-slate-700 bg-slate-900 py-3"><Text className="font-semibold text-sky-300">{file ? file.name : 'Choose document'}</Text></Pressable>
+      <View className="mt-3">
+        <Pressable onPress={handleUpload} disabled={loading} className="items-center rounded-xl bg-sky-500 py-3 disabled:opacity-50"><Text className="font-bold text-slate-950">{loading ? 'Uploading…' : 'Submit note'}</Text></Pressable>
       </View>
-    </View>
+    </View></View>
   );
 }

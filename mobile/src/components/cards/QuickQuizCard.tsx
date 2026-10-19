@@ -56,6 +56,13 @@ export const QuickQuizCard: React.FC<QuickQuizCardProps> = ({
                             disabled={isAnswered}
                             onPress={() => onSelectOption(idx)}
                             style={[styles.baseOption, btnStyle]}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Option ${String.fromCharCode(65 + idx)}: ${option.text}`}
+                            accessibilityState={{
+                                selected: isSelected,
+                                disabled: isAnswered,
+                            }}
+                            accessibilityHint={isAnswered ? undefined : 'Select this answer.'}
                         >
                             <View style={styles.badgeCircle}>
                                 <Text style={styles.badgeCircleText}>{badgeText}</Text>

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Button, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Pressable } from 'react-native';
 import { getNotes } from '../api/notes';
 
 export default function NotesListScreen({ navigation }: any) {
@@ -25,12 +25,12 @@ export default function NotesListScreen({ navigation }: any) {
     }, [load]);
 
     return (
-        <View style={{ flex: 1, padding: 16 }}>
-            <Button title="Refresh Notes" onPress={load} />
-            {loading ? <ActivityIndicator size="large" style={{ marginTop: 20 }} /> : (
+        <View className="flex-1 bg-canvas p-5">
+            <Pressable onPress={load} className="mb-4 items-center rounded-xl bg-sky-500 py-3"><Text className="font-bold text-slate-950">Refresh notes</Text></Pressable>
+            {loading ? <ActivityIndicator size="large" color="#38bdf8" /> : (
                 error ? (
-                    <View style={{ padding: 16 }}>
-                        <Text style={{ color: '#991b1b', textAlign: 'center' }}>{error}</Text>
+                    <View className="p-4">
+                        <Text className="text-center text-red-300">{error}</Text>
                     </View>
                 ) : (
                 <FlatList
@@ -39,13 +39,13 @@ export default function NotesListScreen({ navigation }: any) {
                     renderItem={({ item }) => (
                         <TouchableOpacity
                             onPress={() => navigation.navigate('ProcessingStatus', { noteId: item.id })}
-                            style={{ padding: 12, borderBottomWidth: 1, borderColor: '#ccc' }}
+                            className="border-b border-slate-800 py-4"
                         >
-                            <Text style={{ fontWeight: 'bold' }}>ID {item.id}: {item.title || 'Untitled'}</Text>
-                            <Text>Status: {item.status}</Text>
+                            <Text className="font-bold text-slate-100">{item.title || 'Untitled'}</Text>
+                            <Text className="mt-1 text-slate-400">Status: {item.status}</Text>
                         </TouchableOpacity>
                     )}
-                    ListEmptyComponent={<Text style={{ marginTop: 20, textAlign: 'center' }}>No notes found.</Text>}
+                    ListEmptyComponent={<Text className="mt-5 text-center text-slate-400">No notes found.</Text>}
                 />
                 )
             )}

@@ -37,17 +37,14 @@ class ExternalIngestionPipeline:
             },
         )
 
-        # 3. Create SourceDocument (uploaded_note remains None)
-        document = SourceDocument.objects.create(
-            source=source,
-            uploaded_note=None,
-            title=item.title,
-            document_type=item.document_type,
-            url=item.url,
-            raw_text=item.raw_text,
-            metadata=item.metadata,
-            retrieved_at=timezone.now(),
-        )
+        # 3. Keep external imports idempotent.  Re-running an adapter must not
+        # create duplicate claims/cards for the same canonical source URL.
+        document = SourceDocument.objects.filter(source=source, url=item.url).first()
+        if document:
+            return {"source": source, "document": document, "claims": [], "verification_results": [], "mode": "already_ingested"}
+        document = SourceDocument.objects.create(source=source, uploaded_note=None, title=item.title,
+            document_type=item.document_type, url=item.url, raw_text=item.raw_text,
+            metadata=item.metadata, retrieved_at=timezone.now())
 
         # 4. Evidence-only path (e.g. Reddit or auxiliary evidence link)
         if item.evidence_only or target_claim_for_evidence is not None:

@@ -388,7 +388,7 @@ PARTIAL Scale (Category 14: task 60 scheduled ingestion + rate limiting)
 TODO   Recommendations / Social
 ```
 
-Category 16 — Reel-Feed Implementation — IN PROGRESS
+Category 16 — Reel-Feed Implementation — COMPLETE
 
 Phase 1: Backend data contract — Done
   DONE  Add card_type, quiz_options, key_points, visual_hint to Flashcard model
@@ -410,9 +410,19 @@ Phase 3: CardShell + ConceptVisualCard + RecallCard + QuickQuizCard — DONE
   DONE  mobile/src/components/cards/CardRenderer.tsx
   DONE  mobile/src/components/cards/index.ts barrel export
 
-Phase 4: Full-screen FlatList reel (pagingEnabled, onViewableItemsChanged) — TODO
-Phase 5: LLM card-type and quiz-option generation in flashcard_service.py — TODO
-Phase 6: Backfill, accessibility, analytics — TODO
+Phase 4: Full-screen FlatList reel (pagingEnabled, onViewableItemsChanged) — DONE
+Phase 5: LLM card-type and quiz-option generation in flashcard_service.py — DONE
+Phase 6: Backfill, accessibility, analytics — DONE
+
+Category 17 — Mobile learning experience and source adapters — COMPLETE
+
+- DONE: Three-tab mobile navigation (Feed, Upload, Search), single Profile button menu trigger for Notes, Progress, Playlists, and Knowledge (Profile excluded from menu list).
+- DONE: Reusable native dark-mode UI primitives under mobile/src/components/ui/ (Button, Input, Badge, Card).
+- DONE: Dual-mode taxonomy-aware fuzzy topic search with confidence scoring, suggestions, and empty/unmatched state handling.
+- DONE: Continuous vertical flashcard feed streaming with session de-duplication, batch prefetching (batch size 15, windowSize=3, initialNumToRender=2), and removal of fixed counters.
+- DONE: Allow-listed official documentation adapters for C++, Java, Python, JavaScript/MDN, and TypeScript with metadata and source tracking.
+- DONE: Interactive Playlist management with PlaylistDetailScreen for viewing cards saved inside playlists.
+- DONE: Comprehensive dark-mode visual pass across FlashcardDetailScreen, MasteryScreen, SearchScreen, PlaylistModal, and PlaylistDetailScreen.
 
 
 Order to keep:

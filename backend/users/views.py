@@ -4,7 +4,7 @@ from django.shortcuts import render
 from rest_framework import generics, permissions, status
 from django.contrib.auth.models import User
 from django.db import connection
-from django.core.cache import cache
+import logging
 from .serializers import RegisterSerializer, GoogleAuthSerializer, CompleteProfileSerializer
 from google.oauth2 import id_token as google_id_token
 from google.auth.transport import requests as google_requests
@@ -17,30 +17,22 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from .models import UserProfile
 import os
 
+logger = logging.getLogger(__name__)
+
 class HealthCheckView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        status_data = {
-            "status": "ok",
-            "db": False,
-            "cache": False,
-            }
         try:
             with connection.cursor() as cursor:
                 cursor.execute("SELECT 1;")
-                status_data["db"] = True
-        except Exception as e:
-            status_data["db_error"] = str(e)
-
-        try:
-            cache.set("health_ping", "pong", 5)
-            status_data["cache"] = cache.get("health_ping") == "pong"
-        except Exception as e:
-            status_data["cache_error"] = str(e)
-
-        all_healthy = status_data["db"] and status_data["cache"]
-        return Response(status_data, status=200 if all_healthy else 503)
+        except Exception:
+            logger.exception("Database readiness check failed")
+            return Response(
+                {"status": "unavailable", "database": "unavailable"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        return Response({"status": "ok", "database": "ok"})
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     permission_classes = (permissions.AllowAny,)

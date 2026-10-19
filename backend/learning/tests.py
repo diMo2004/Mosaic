@@ -1,6 +1,8 @@
 from urllib import response
+from io import StringIO
 
-from django.test import TestCase
+from django.core.management import call_command
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -9,7 +11,7 @@ from unittest.mock import patch
 
 from .services.rag_explanation import RAGExplanationService, RAGExplanationServiceError
 from knowledge.models import CanonicalClaim, Concept, Evidence, Source, ExtractedClaim, SourceDocument
-from learning.models import Flashcard, Playlist, PlaylistItem, UserProgress
+from learning.models import Flashcard, FlashcardFeedEvent, Playlist, PlaylistItem, UserProgress
 from learning.services.flashcard_service import FlashcardGenerationService
 
 # Create your tests here.
@@ -50,6 +52,15 @@ class FlashcardAPITests(APITestCase):
             "answer": "To visit nodes level by level.",
             "explanation": "This flashcard was generated from a canonical claim.",
             "difficulty": Flashcard.DIFFICULTY_BEGINNER,
+            "card_type": Flashcard.CARD_TYPE_QUICK_QUIZ,
+            "quiz_options": [
+                {"text": "Level order", "is_correct": True, "explanation": "BFS visits by distance."},
+                {"text": "Depth first", "is_correct": False, "explanation": "That describes DFS."},
+                {"text": "Random order", "is_correct": False, "explanation": "Traversal is systematic."},
+                {"text": "Reverse order", "is_correct": False, "explanation": "BFS uses FIFO order."},
+            ],
+            "key_points": ["BFS visits level by level."],
+            "visual_hint": "Queue",
         }
         with patch.object(FlashcardGenerationService, "_generate_copy", return_value=generated_copy):
             self.flashcard = FlashcardGenerationService().generate_from_canonical_claim(self.canonical)
@@ -58,13 +69,87 @@ class FlashcardAPITests(APITestCase):
     def test_generator_sets_canonical_claim(self):
         self.assertEqual(self.flashcard.source_claim_id, self.canonical.id)
         self.assertEqual(self.flashcard.explanation, "This flashcard was generated from a canonical claim.")
+        self.assertEqual(self.flashcard.card_type, Flashcard.CARD_TYPE_QUICK_QUIZ)
+        self.assertEqual(len(self.flashcard.quiz_options), 4)
+        self.assertEqual(self.flashcard.card_metadata_version, 1)
+
+    def test_invalid_quiz_options_are_rejected(self):
+        valid = [
+            {"text": "A", "is_correct": True, "explanation": ""},
+            {"text": "B", "is_correct": False, "explanation": ""},
+            {"text": "C", "is_correct": False, "explanation": ""},
+            {"text": "D", "is_correct": False, "explanation": ""},
+        ]
+        service = FlashcardGenerationService()
+        self.assertEqual(len(service._validated_quiz_options(valid)), 4)
+        self.assertEqual(service._validated_quiz_options(valid[:3]), [])
+        self.assertEqual(
+            service._validated_quiz_options([
+                {**option, "is_correct": False} for option in valid
+            ]),
+            [],
+        )
+
+    def test_feed_viewed_endpoint_tracks_card_impressions(self):
+        url = reverse("flashcard-viewed", kwargs={"pk": self.flashcard.id})
+        first = self.client.post(url)
+        second = self.client.post(url)
+        self.assertEqual(first.status_code, status.HTTP_200_OK)
+        self.assertEqual(first.data["view_count"], 1)
+        self.assertEqual(second.data["view_count"], 2)
+        self.assertTrue(UserProgress.objects.filter(
+            user=self.user,
+            flashcard=self.flashcard,
+            last_viewed_at__isnull=False,
+        ).exists())
+
+    @override_settings(GEMINI_API_KEY="test-key")
+    def test_metadata_backfill_is_dry_run_unless_apply_is_passed(self):
+        self.flashcard.card_metadata_version = 0
+        self.flashcard.save(update_fields=["card_metadata_version"])
+        output = StringIO()
+        call_command("backfill_flashcard_types", stdout=output)
+        self.flashcard.refresh_from_db()
+        self.assertEqual(self.flashcard.card_metadata_version, 0)
+        self.assertIn("Dry run: 1 flashcard(s)", output.getvalue())
+
+        generated_metadata = {
+            "card_type": Flashcard.CARD_TYPE_RECALL,
+            "quiz_options": None,
+            "key_points": ["Uses FIFO order."],
+            "visual_hint": "",
+        }
+        with patch.object(
+            FlashcardGenerationService,
+            "_generate_copy",
+            return_value=generated_metadata,
+        ):
+            call_command("backfill_flashcard_types", apply=True, stdout=StringIO())
+        self.flashcard.refresh_from_db()
+        self.assertEqual(self.flashcard.card_metadata_version, 1)
+        self.assertEqual(self.flashcard.key_points, ["Uses FIFO order."])
 
     def test_feed_lists_active_canonical_flashcards(self):
-        response = self.client.get("/api/learning/flashcards/")
+        response = self.client.get("/api/learning/flashcards/?session_id=123e4567-e89b-42d3-a456-426614174000")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["canonical_claim_id"], self.canonical.id)
-        self.assertEqual(response.data[0]["concept_name"], "BFS")
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(response.data["results"][0]["canonical_claim_id"], self.canonical.id)
+        self.assertEqual(response.data["results"][0]["concept_name"], "BFS")
+        self.assertTrue(FlashcardFeedEvent.objects.filter(user=self.user, flashcard=self.flashcard).exists())
+
+    def test_feed_does_not_repeat_cards_in_a_session(self):
+        session_id = "123e4567-e89b-42d3-a456-426614174001"
+        first = self.client.get(f"/api/learning/flashcards/?session_id={session_id}")
+        second = self.client.get(f"/api/learning/flashcards/?session_id={session_id}")
+        self.assertEqual(len(first.data["results"]), 1)
+        self.assertEqual(second.data["results"], [])
+        self.assertTrue(second.data["session_exhausted"])
+
+    def test_topic_search_returns_exact_taxonomy_cards(self):
+        response = self.client.get("/api/learning/search/?topic=BFS")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["taxonomy_match"]["found"])
+        self.assertEqual(response.data["results"][0]["id"], self.flashcard.id)
 
     def test_detail_increments_progress(self):
         response = self.client.get(f"/api/learning/flashcards/{self.flashcard.id}/")

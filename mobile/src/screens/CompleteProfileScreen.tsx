@@ -3,7 +3,7 @@
 // Backend Endpoint: POST /api/auth/complete-profile/
 
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, Button, Alert } from 'react-native';
+import { View, Text, TextInput, Alert, Pressable } from 'react-native';
 import { completeProfile, getProfile } from '@/api/auth';
 
 export default function CompleteProfileScreen({ navigation, route }: any) {
@@ -71,39 +71,34 @@ export default function CompleteProfileScreen({ navigation, route }: any) {
     };
 
     return (
-    <View style={{ padding: 20, marginTop: 40 }}>
-      <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 20 }}>
-        Mandatory Profile Onboarding
-      </Text>
+    <View className="flex-1 bg-canvas p-5 pt-10">
+      <Text className="mb-2 text-2xl font-bold text-slate-50">Your profile</Text>
+      <Text className="mb-6 text-slate-400">Use these preferences to tailor your learning experience.</Text>
       <TextInput
-        placeholder="Full Name"
+        placeholder="Full name" placeholderTextColor="#64748b"
         value={fullName}
         onChangeText={setFullName}
-        style={{ borderWidth: 1, padding: 8, marginBottom: 10 }}
+        className="mb-3 rounded-xl border border-slate-700 bg-slate-900 px-3 py-3 text-slate-50"
       />
       <TextInput
-        placeholder="Education Level"
+        placeholder="Education level" placeholderTextColor="#64748b"
         value={educationLevel}
         onChangeText={setEducationLevel}
-        style={{ borderWidth: 1, padding: 8, marginBottom: 10 }}
+        className="mb-3 rounded-xl border border-slate-700 bg-slate-900 px-3 py-3 text-slate-50"
       />
       <TextInput
-        placeholder="Learning Goal"
+        placeholder="Learning goal" placeholderTextColor="#64748b"
         value={learningGoal}
         onChangeText={setLearningGoal}
-        style={{ borderWidth: 1, padding: 8, marginBottom: 10 }}
+        className="mb-3 rounded-xl border border-slate-700 bg-slate-900 px-3 py-3 text-slate-50"
       />
       <TextInput
-        placeholder="Interests (comma separated)"
+        placeholder="Interests, comma separated" placeholderTextColor="#64748b"
         value={interests}
         onChangeText={setInterests}
-        style={{ borderWidth: 1, padding: 8, marginBottom: 20 }}
+        className="mb-5 rounded-xl border border-slate-700 bg-slate-900 px-3 py-3 text-slate-50"
       />
-      <Button
-        title={!profileLoaded ? 'Loading Profile...' : saving ? 'Saving Profile...' : 'Save Profile & Continue'}
-        onPress={handleComplete}
-        disabled={!profileLoaded || saving}
-      />
+      <Pressable onPress={handleComplete} disabled={!profileLoaded || saving} className="items-center rounded-xl bg-sky-500 py-3 disabled:opacity-50"><Text className="font-bold text-slate-950">{!profileLoaded ? 'Loading profile…' : saving ? 'Saving profile…' : 'Save profile & continue'}</Text></Pressable>
     </View>
   );
 }

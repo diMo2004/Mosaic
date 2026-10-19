@@ -68,6 +68,9 @@ export const CardShell: React.FC<CardShellProps> = ({
                         <TouchableOpacity
                             activeOpacity={0.75}
                             onPress={onToggleUnderstood}
+                            accessibilityRole="button"
+                            accessibilityLabel={isUnderstood ? 'Understood' : 'Mark as understood'}
+                            accessibilityState={{ selected: Boolean(isUnderstood) }}
                             style={[
                                 styles.actionBtn,
                                 isUnderstood && styles.actionBtnUnderstood,
@@ -87,6 +90,9 @@ export const CardShell: React.FC<CardShellProps> = ({
                         <TouchableOpacity
                             activeOpacity={0.75}
                             onPress={onToggleSave}
+                            accessibilityRole="button"
+                            accessibilityLabel={isSaved ? 'Remove from saved cards' : 'Save card'}
+                            accessibilityState={{ selected: Boolean(isSaved) }}
                             style={[
                                 styles.actionBtn,
                                 isSaved && styles.actionBtnSaved,
@@ -109,6 +115,7 @@ export const CardShell: React.FC<CardShellProps> = ({
                             activeOpacity={0.75}
                             onPress={onOpenExplain}
                             style={styles.iconBtn}
+                            accessibilityRole="button"
                             accessibilityLabel="View Grounded Explanation"
                         >
                             <Text style={styles.iconBtnText}>📖 Explain</Text>
@@ -119,6 +126,7 @@ export const CardShell: React.FC<CardShellProps> = ({
                             activeOpacity={0.75}
                             onPress={onOpenDetail}
                             style={styles.iconBtn}
+                            accessibilityRole="button"
                             accessibilityLabel="Card Details"
                         >
                             <Text style={styles.iconBtnText}>ℹ️</Text>

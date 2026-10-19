@@ -17,7 +17,8 @@ export const apiClient = axios.create({
         'Content-Type': 'application/json',
         Accept: 'application/json',
     },
-    timeout: 120000,
+    // Keep auth failures prompt; large multipart uploads override this per request.
+    timeout: 30000,
 });
 
 const isPublicAuthRequest = (url?: string) =>
@@ -65,7 +66,7 @@ apiClient.interceptors.response.use(
 
                 const refreshResponse = await axios.post(`${BASE_URL}/api/auth/token/refresh/`, {
                     refresh: refreshToken,
-                });
+                }, { timeout: 15000 });
                 
                 const newAccessToken = refreshResponse.data.access;
                 await SecureStore.setItemAsync('accessToken', newAccessToken);

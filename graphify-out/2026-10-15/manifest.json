@@ -192,9 +192,9 @@
     "semantic_hash": ""
   },
   "backend/learning/tests.py": {
-    "mtime": 1791790090.6350515,
-    "seen": 1792006747.0714035,
-    "ast_hash": "b9c96f9e73b73e0a64b73a9ab3b4d4a0",
+    "mtime": 1792048145.66004,
+    "seen": 1792048216.6351197,
+    "ast_hash": "b1d3bc036af9d9ce1be620a18093f02a",
     "semantic_hash": ""
   },
   "backend/learning/urls.py": {
@@ -456,9 +456,9 @@
     "semantic_hash": "2423b55bf8858fba49e28aadfd9ec955"
   },
   "backend/verification/services/ocr/factory.py": {
-    "mtime": 1791960363.2832499,
-    "seen": 1792006747.071447,
-    "ast_hash": "8c8a26557725976453a9aec1b08bc74a",
+    "mtime": 1792049133.8183281,
+    "seen": 1792049144.9207878,
+    "ast_hash": "f4e18f51b83783f960107935e9c79c3a",
     "semantic_hash": ""
   },
   "backend/verification/services/ocr/placeholder.py": {
@@ -474,9 +474,9 @@
     "semantic_hash": ""
   },
   "backend/verification/tests.py": {
-    "mtime": 1790590140.9329474,
-    "seen": 1790591645.5540123,
-    "ast_hash": "0b46057574b6293a5642c26d565878b0",
+    "mtime": 1792049134.1176312,
+    "seen": 1792049144.9207907,
+    "ast_hash": "d20edef80995ccb62a7bb228001c44ee",
     "semantic_hash": ""
   },
   "backend/verification/urls.py": {
@@ -618,9 +618,9 @@
     "semantic_hash": "59d8f80f3c3ca9a6173a4e6a7cde0b2c"
   },
   ".github/workflows/ci-cd.yml": {
-    "mtime": 1791960363.2832499,
-    "seen": 1792006747.0714998,
-    "ast_hash": "0b5e3e4d4ff130630c67c0654c511229",
+    "mtime": 1792048145.960852,
+    "seen": 1792048216.6352181,
+    "ast_hash": "e9ca7d7ea0119a74b72127d63039cfae",
     "semantic_hash": ""
   },
   "README.md": {
@@ -696,9 +696,9 @@
     "semantic_hash": ""
   },
   "backend/requirements.txt": {
-    "mtime": 1790586172.4930985,
-    "seen": 1790591645.5540361,
-    "ast_hash": "46dedddb519a1a12cda4db19f0c69fbb",
+    "mtime": 1792047633.0124063,
+    "seen": 1792048216.6352215,
+    "ast_hash": "91ecc13a5d235bb4e2d8e3464f528937",
     "semantic_hash": ""
   },
   "docs/roadmap.md": {

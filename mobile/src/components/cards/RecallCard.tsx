@@ -30,6 +30,9 @@ export const RecallCard: React.FC<RecallCardProps> = ({
                     activeOpacity={0.8}
                     onPress={onReveal}
                     style={styles.revealTrigger}
+                    accessibilityRole="button"
+                    accessibilityLabel="Reveal answer"
+                    accessibilityHint="Shows the answer after you have tried to recall it."
                 >
                     <Text style={styles.revealIcon}>👁️</Text>
                     <Text style={styles.revealTitle}>Tap to Reveal Answer</Text>

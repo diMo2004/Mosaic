@@ -18,6 +18,7 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 # Local .env values are defaults; container/service environment must take precedence.
+load_dotenv(BASE_DIR / '.env.local', override=False)
 load_dotenv(BASE_DIR / '.env', override=False)
 
 def env(name, default=""):
@@ -37,10 +38,23 @@ SECRET_KEY = env("SECRET_KEY", "unsafe-dev-secret-key-change-me-at-least-32-char
 DEBUG = env("DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = [
-    host.strip() 
+    host.strip()
     for host in env("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
     if host.strip()
 ]
+for local_host in ("localhost", "127.0.0.1"):
+    if local_host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(local_host)
+
+# The local tunnel launcher sets this to the ephemeral trycloudflare.com host.
+# Keep the configured hosts exact; never use a wildcard for a public tunnel.
+TUNNEL_HOST = env("TUNNEL_HOST", "")
+if TUNNEL_HOST:
+    if TUNNEL_HOST not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(TUNNEL_HOST)
+
+if env("TRUST_PROXY_SSL", "False") == "True":
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 NOTE_UPLOAD_MAX_SIZE = int(env("NOTE_UPLOAD_MAX_SIZE", str(10 * 1024 * 1024)))  # Default to 10 MB
 NOTE_UPLOAD_ALLOWED_CONTENT_TYPES = [
     content_type.strip()
@@ -132,9 +146,14 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 DATABASE_URL = env("DATABASE_URL")
 if DATABASE_URL:
-    DATABASES = {
-        'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)
-    }
+    default_database = dj_database_url.parse(
+        DATABASE_URL,
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
+    if default_database["ENGINE"] == "django.db.backends.postgresql":
+        default_database.setdefault("OPTIONS", {}).setdefault("connect_timeout", 10)
+    DATABASES = {"default": default_database}
 elif env("DATABASE_ENGINE") == "postgres":
     DATABASES = {
         'default': {

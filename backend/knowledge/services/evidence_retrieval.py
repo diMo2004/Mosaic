@@ -1,5 +1,7 @@
 from typing import Any
+from math import sqrt
 
+from django.db import connection
 from pgvector.django import CosineDistance
 from knowledge.models import Evidence
 from knowledge.services.embeddings import EmbeddingService
@@ -30,18 +32,26 @@ class EvidenceRetrievalService:
             ) from e
 
         try:
-            evidence_items = list(
+            queryset = (
                 Evidence.objects
-                .filter(
-                    embedding__isnull=False,
-                    excerpt__isnull=False,
-                )
+                .filter(embedding__isnull=False, excerpt__isnull=False)
                 .exclude(excerpt="")
-                .select_related(
-                    "source",
-                    "claim",
-                    "claim__source_document",
-                )
+                .select_related("source", "claim", "claim__source_document")
+            )
+            # SQLite is used by the local fast test configuration and cannot
+            # execute pgvector's <=> operator. Keep semantic ranking available
+            # there with a small Python fallback; production PostgreSQL remains
+            # database-ranked and indexed.
+            if connection.vendor != "postgresql":
+                evidence_items = list(queryset)
+                for item in evidence_items:
+                    item.distance = self._cosine_distance(item.embedding, query_vector)
+                return sorted(
+                    evidence_items,
+                    key=lambda item: (item.distance, -item.relevance_score, -item.id),
+                )[:top_k]
+            evidence_items = list(
+                queryset
                 .annotate(
                     distance=CosineDistance(
                         "embedding",
@@ -59,6 +69,15 @@ class EvidenceRetrievalService:
                 f"Failed to retrieve evidence from database: {e}"
             ) from e
         return evidence_items
+
+    @staticmethod
+    def _cosine_distance(left, right) -> float:
+        left = [float(value) for value in left]
+        right = [float(value) for value in right]
+        denominator = sqrt(sum(value * value for value in left)) * sqrt(sum(value * value for value in right))
+        if not denominator:
+            return 1.0
+        return 1.0 - sum(a * b for a, b in zip(left, right)) / denominator
 
     def retrieve_for_claim(
             self,

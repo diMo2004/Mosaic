@@ -13,6 +13,7 @@ export const uploadNote = async (title: string, fileUri: string, fileName: strin
     return (await apiClient.post('/api/notes/upload/', formData, {
         // Overrides apiClient's JSON default; Axios/RN supplies the boundary.
         headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 120000,
     })).data;
 };
 

@@ -3,6 +3,8 @@
 // Backend Endpoint: GET /api/learning/feed/
 
 import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { ProfileMenu } from '@/components/ProfileMenu';
 import {
     ActivityIndicator,
     FlatList,
@@ -20,6 +22,7 @@ import type { FlashcardDTO } from '@/types/flashcard';
 export default function FeedScreen({ navigation }: any) {
     const feed = useFlashcardFeed();
     const [viewportHeight, setViewportHeight] = useState(0);
+    const listRef = useRef<FlatList<FlashcardDTO>>(null);
     const onCardVisibleRef = useRef(feed.onCardVisible);
     onCardVisibleRef.current = feed.onCardVisible;
 
@@ -45,7 +48,7 @@ export default function FeedScreen({ navigation }: any) {
                 cardHeight={viewportHeight}
                 onRevealAnswer={feed.revealAnswer}
                 onSelectOption={feed.selectOption}
-                onToggleSave={feed.toggleSave}
+                onToggleSave={id => navigation.navigate('PlaylistModal', { flashcardId: id })}
                 onMarkUnderstood={feed.markUnderstood}
                 onOpenDetail={id => navigation.navigate('FlashcardDetail', { id })}
                 onOpenExplain={claimId =>
@@ -57,7 +60,6 @@ export default function FeedScreen({ navigation }: any) {
         feed.viewStates,
         feed.revealAnswer,
         feed.selectOption,
-        feed.toggleSave,
         feed.markUnderstood,
         navigation,
         viewportHeight,
@@ -77,6 +79,17 @@ export default function FeedScreen({ navigation }: any) {
         return `${((feed.currentIndex + 1) / feed.cards.length) * 100}%` as `${number}%`;
     }, [feed.currentIndex, feed.cards.length]);
 
+    const refreshFeed = useCallback(() => {
+        listRef.current?.scrollToOffset({ offset: 0, animated: false });
+        feed.refresh();
+    }, [feed.refresh]);
+
+    const hasOpenedRef = useRef(false);
+    useFocusEffect(useCallback(() => {
+        if (hasOpenedRef.current) refreshFeed();
+        hasOpenedRef.current = true;
+    }, [refreshFeed]));
+
     if (feed.status === 'idle' || feed.status === 'loading') {
         return (
             <View style={styles.center}>
@@ -91,7 +104,7 @@ export default function FeedScreen({ navigation }: any) {
             <View style={styles.center}>
                 <Text style={styles.title}>Couldn’t load the feed</Text>
                 <Text style={styles.secondary}>{feed.error}</Text>
-                <TouchableOpacity style={styles.retry} onPress={feed.refresh}>
+                <TouchableOpacity style={styles.retry} onPress={refreshFeed}>
                     <Text style={styles.retryText}>Try again</Text>
                 </TouchableOpacity>
             </View>
@@ -109,6 +122,7 @@ export default function FeedScreen({ navigation }: any) {
             {viewportHeight > 0 && feed.cards.length > 0 && (
                 <>
                     <FlatList
+                        ref={listRef}
                         data={feed.cards}
                         keyExtractor={item => String(item.id)}
                         renderItem={renderItem}
@@ -117,34 +131,33 @@ export default function FeedScreen({ navigation }: any) {
                         snapToInterval={viewportHeight}
                         decelerationRate="fast"
                         showsVerticalScrollIndicator={false}
-                        initialNumToRender={1}
+                        initialNumToRender={2}
                         maxToRenderPerBatch={2}
                         windowSize={3}
                         getItemLayout={getItemLayout}
                         onViewableItemsChanged={onViewableItemsChanged}
                         viewabilityConfig={viewabilityConfig}
+                        onEndReachedThreshold={0.5}
+                        onEndReached={() => {
+                            if (!feed.sessionExhausted && !feed.isLoadingMore) {
+                                feed.loadMore();
+                            }
+                        }}
+                        accessibilityRole="list"
                         refreshControl={
                             <RefreshControl
                                 refreshing={feed.status === 'refreshing'}
-                                onRefresh={feed.refresh}
+                                onRefresh={refreshFeed}
                                 tintColor="#38bdf8"
                             />
                         }
                     />
 
-                    <View pointerEvents="none" style={styles.progressTrack}>
-                        <View style={[styles.progressFill, { width: progressWidth }]} />
-                    </View>
+                    <View style={styles.profileControl}><ProfileMenu navigation={navigation} /></View>
 
-                    <View pointerEvents="none" style={styles.counter}>
-                        <Text style={styles.counterText}>
-                            {feed.currentIndex + 1} / {feed.cards.length}
-                        </Text>
-                    </View>
-
-                    {feed.currentIndex === feed.cards.length - 1 && (
+                    {feed.sessionComplete && (
                         <View pointerEvents="none" style={styles.endHint}>
-                            <Text style={styles.endHintText}>End of feed · swipe down to revisit</Text>
+                            <Text style={styles.endHintText}>You’ve viewed every card · pull down to refresh</Text>
                         </View>
                     )}
                 </>
@@ -159,7 +172,7 @@ export default function FeedScreen({ navigation }: any) {
                     <TouchableOpacity style={styles.retry} onPress={() => navigation.navigate('Upload')}>
                         <Text style={styles.retryText}>Upload a note</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={feed.refresh}>
+                    <TouchableOpacity onPress={refreshFeed} accessibilityRole="button" accessibilityLabel="Refresh feed">
                         <Text style={styles.secondary}>Refresh feed</Text>
                     </TouchableOpacity>
                 </View>
@@ -205,7 +218,7 @@ const styles = StyleSheet.create({
         borderRadius: 2,
     },
     progressFill: { height: 3, backgroundColor: '#38bdf8', borderRadius: 2 },
-    counter: {
+    profileControl: {
         position: 'absolute',
         top: 12,
         right: 20,
@@ -214,7 +227,6 @@ const styles = StyleSheet.create({
         paddingVertical: 5,
         borderRadius: 12,
     },
-    counterText: { color: '#cbd5e1', fontSize: 11, fontWeight: '700' },
     endHint: {
         position: 'absolute',
         bottom: 12,

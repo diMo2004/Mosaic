@@ -2,7 +2,36 @@
 // Stores access and refresh in SecureStore. If response has status: "profile_required", navigates immediately to CompleteProfile.
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, Alert, ActivityIndicator} from 'react-native';
+import axios from 'axios';
 import { login, register } from '@/api/auth';
+
+function getAuthErrorMessage(error: unknown): string {
+  if (!axios.isAxiosError(error)) {
+    return error instanceof Error ? error.message : 'Login failed. Please try again.';
+  }
+
+  if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+    return 'The local backend did not respond within 30 seconds. Check that the local tunnel and Django server are running, then try again.';
+  }
+  if (!error.response) {
+    return 'Could not reach the local backend. Restart the local tunnel launcher and confirm this app is using the current Expo session.';
+  }
+  if (error.response.status === 401) {
+    return 'The username or password is incorrect.';
+  }
+  if (error.response.status === 503) {
+    return 'The local backend is running but cannot reach the Neon database. Check the backend terminal and DATABASE_URL.';
+  }
+
+  const data = error.response.data as { detail?: unknown } | string | undefined;
+  if (typeof data === 'string' && /<!doctype|<html/i.test(data)) {
+    return `The backend returned an HTML error (${error.response.status}). Check the Django terminal for the server-side cause.`;
+  }
+  if (data && typeof data === 'object' && typeof data.detail === 'string') {
+    return data.detail;
+  }
+  return typeof data === 'string' ? data : `Login failed with status ${error.response.status}.`;
+}
 
 export default function LoginScreen({navigation}: any) {
   const [isRegister, setIsRegister] = useState(false);
@@ -28,8 +57,8 @@ export default function LoginScreen({navigation}: any) {
       navigation.replace(result.profile_completed ? 'Main' : 'CompleteProfile', {
         profile: result.profile,
       });
-    } catch (error: any) {
-        Alert.alert('Error', JSON.stringify(error.response?.data || error.message));
+    } catch (error: unknown) {
+        Alert.alert('Login Error', getAuthErrorMessage(error));
     } finally {
       setLoading(false);
     }

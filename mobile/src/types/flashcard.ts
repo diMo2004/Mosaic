@@ -42,7 +42,20 @@ export interface FlashcardDTO {
 
 export type FlashcardListResponse = 
     | FlashcardDTO[] 
-    | { results: FlashcardDTO[]; count: number; next: string | null; previous: string | null };
+    | { results: FlashcardDTO[]; count?: number; next?: string | null; previous?: string | null; session_id?: string; session_exhausted?: boolean };
+
+export interface TopicSearchResponse {
+    query: string;
+    taxonomy_match: {
+        found: boolean;
+        concept_id: number | null;
+        name: string | null;
+        confidence?: number;
+        match_type?: 'exact' | 'fuzzy' | 'none';
+    };
+    suggestions: { concept_id: number; name: string; score?: number }[];
+    results: FlashcardDTO[];
+}
     
 export interface CardViewState {
     revealed: boolean;

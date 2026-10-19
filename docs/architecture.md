@@ -46,7 +46,7 @@ Mosaic/
   docker-compose.yml
   backend/Dockerfile
   .github/workflows/ci-cd.yml
-  mobile/       not created yet (Expo planned)
+  mobile/       Expo + React Native client (NativeWind and Lucide)
 ```
 
 ## Backend Stack
@@ -61,7 +61,30 @@ OCR: Gemini + Azure fallback
 LLM: Gemini for extraction/assignment
 ```
 
-DRF is used because the frontend/mobile app will consume JSON APIs. JWT is used because the app is mobile/API-first rather than a traditional cookie-session website.
+DRF is used because the Expo mobile app consumes JSON APIs. JWT is used because the app is mobile/API-first rather than a traditional cookie-session website.
+
+## Mobile navigation and learning delivery
+
+The primary mobile navigation has three tabs: **Feed**, **Upload**, and
+**Search**. Profile is opened from the upper-right profile control. Its adjacent
+library menu provides Notes, Progress, Playlists, and Knowledge; Profile is not
+duplicated in that menu.
+
+The feed is backed by persisted `FlashcardFeedEvent` records. Each feed request
+has a session UUID, excludes cards served earlier in that session, and ranks
+unseen or least-recently viewed cards first. This makes vertical Reel-style
+sessions repeat-resistant across launches without storing the feed on the
+device.
+
+Topic search resolves exact CSE taxonomy concepts first. For a missing topic it
+returns close taxonomy suggestions and cards for the best available match, while
+explicitly marking the topic as absent from the taxonomy.
+
+External adapter ingestion persists its `SourceDocument`, extracted claims,
+canonical claims, and generated flashcards through the same verification
+pipeline used by uploaded notes. Approved adapters are Wikimedia, arXiv,
+GitHub, StackExchange, Reddit evidence, and an allow-listed official
+documentation adapter for C++, Java, Python, JavaScript/MDN, and TypeScript.
 
 ## Apps
 

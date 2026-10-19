@@ -19,9 +19,10 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 from rest_framework_simplejwt.views import TokenRefreshView
-from users.views import ProfileAwareTokenObtainPairView
+from users.views import HealthCheckView, ProfileAwareTokenObtainPairView
 
 urlpatterns = [
+    path('api/health/', HealthCheckView.as_view(), name='health-check'),
     path('admin/', admin.site.urls),
     path('api/auth/', include('users.urls')),
     path('api/auth/login/', ProfileAwareTokenObtainPairView.as_view(), name='token_obtain_pair'),
