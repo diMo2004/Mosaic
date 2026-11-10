@@ -4,6 +4,7 @@ from django.core.management.base import BaseCommand
 from django.utils.text import slugify
 from django.conf import settings
 from knowledge.models import Concept, ConceptRelationship
+from verification.services.concept_assignment import invalidate_cached_graph
 
 class Command(BaseCommand):
     help = "Seeds the CSE technology knowledge graph from docs/cse_tech_concepts.md"
@@ -62,6 +63,8 @@ class Command(BaseCommand):
                 if created:
                     edges_created += 1
 
+        # Concept assignment caches the taxonomy graph; rebuild it from the new rows.
+        invalidate_cached_graph()
         self.stdout.write(self.style.SUCCESS(
             f"Successfully seeded CSE concepts and relationships. Created {created_count} concepts and {edges_created} relationships."
         ))

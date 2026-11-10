@@ -5,6 +5,7 @@ import {
     TouchableOpacity,
     StyleSheet,
     Dimensions,
+    Linking,
 } from 'react-native';
 import type { FlashcardDTO } from '@/types/flashcard';
 
@@ -61,6 +62,20 @@ export const CardShell: React.FC<CardShellProps> = ({
             <View style={styles.contentSlot}>
                 {children}
             </View>
+            {/* License attribution for externally sourced cards */}
+            {card.attribution?.url ? (
+                <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => { void Linking.openURL(card.attribution!.url).catch(() => undefined); }}
+                    accessibilityRole="link"
+                    accessibilityLabel={`Source: ${card.attribution.source}`}
+                >
+                    <Text style={styles.attributionText} numberOfLines={1}>
+                        Source: {card.attribution.attribution || card.attribution.source}
+                        {card.attribution.license ? ` · ${card.attribution.license.toUpperCase()}` : ''}
+                    </Text>
+                </TouchableOpacity>
+            ) : null}
             {/* Bottom Action Bar */}
             <View style={styles.bottomBar}>
                 <View style={styles.actionLeft}>
@@ -210,6 +225,11 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         marginVertical: 12,
+    },
+    attributionText: {
+        color: '#64748b',
+        fontSize: 11,
+        marginBottom: 8,
     },
     bottomBar: {
         flexDirection: 'row',

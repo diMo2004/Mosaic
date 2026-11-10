@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils.text import slugify
 from django.utils import timezone
-from .models import Evidence, Source, CanonicalClaim, Concept, ExtractedClaim, SourceDocument, ConceptRelationship, UnmappedConceptReview
+from .models import Evidence, Source, CanonicalClaim, Concept, ExtractedClaim, SourceDocument, ConceptRelationship, UnmappedConceptReview, IngestionJob, SourceDiscoveryCheckpoint
 from verification.services.concept_assignment import invalidate_cached_graph
 # Register your models here.
 
@@ -79,10 +79,11 @@ class SourceDocumentAdmin(admin.ModelAdmin):
         "document_type",
         "source",
         "uploaded_note",
+        "is_current",
         "created_at",
     ]
-    list_filter = ["document_type", "created_at"]
-    search_fields = ["title", "raw_text", "url"]
+    list_filter = ["document_type", "is_current", "created_at"]
+    search_fields = ["title", "raw_text", "url", "external_id"]
 
 @admin.register(Concept)
 class ConceptAdmin(admin.ModelAdmin):
@@ -170,3 +171,36 @@ class UnmappedConceptReviewAdmin(admin.ModelAdmin):
 
         invalidate_cached_graph()
         self.message_user(request, f"Successfully approved {approved_count} concept(s) into taxonomy.")
+
+
+@admin.register(IngestionJob)
+class IngestionJobAdmin(admin.ModelAdmin):
+    list_display = ["id", "adapter", "external_id", "status", "attempts", "topic", "discovered_at", "completed_at"]
+    list_filter = ["adapter", "status"]
+    search_fields = ["external_id", "identifier", "title", "url", "last_error"]
+    readonly_fields = ["discovered_at", "enqueued_at", "started_at", "completed_at", "updated_at", "result", "last_error"]
+    actions = ["retry_jobs"]
+
+    @admin.action(description="Retry selected jobs now")
+    def retry_jobs(self, request, queryset):
+        from knowledge.ingestion.jobs import enqueue_jobs
+
+        ids = list(queryset.exclude(status=IngestionJob.STATUS_PROCESSING).values_list("id", flat=True))
+        IngestionJob.objects.filter(id__in=ids).update(
+            status=IngestionJob.STATUS_PENDING, attempts=0, next_attempt_at=None, locked_until=None,
+        )
+        enqueue_jobs(ids)
+        self.message_user(request, f"Re-queued {len(ids)} job(s).")
+
+
+@admin.register(SourceDiscoveryCheckpoint)
+class SourceDiscoveryCheckpointAdmin(admin.ModelAdmin):
+    list_display = ["adapter", "topic", "runs", "candidates_total", "exhausted", "consecutive_failures", "last_success_at", "next_run_at"]
+    list_filter = ["adapter", "exhausted"]
+    search_fields = ["topic", "last_error"]
+    actions = ["reset_checkpoints"]
+
+    @admin.action(description="Reset cursor and run on next schedule")
+    def reset_checkpoints(self, request, queryset):
+        updated = queryset.update(cursor={}, exhausted=False, next_run_at=None, lease_until=None, consecutive_failures=0)
+        self.message_user(request, f"Reset {updated} checkpoint(s).")

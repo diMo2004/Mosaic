@@ -2,6 +2,7 @@ import json
 import logging
 import re
 from django.conf import settings
+from django.db import IntegrityError, transaction
 from google import genai
 from google.genai import types
 from learning.models import Flashcard
@@ -16,31 +17,56 @@ class FlashcardGenerationService:
         if canonical_claim is None:
             raise ValueError("Flashcards can only be generated from a CanonicalClaim.")
 
+        # Idempotent: any existing card (active or deliberately deactivated) for
+        # this claim wins, and is checked before spending an LLM call.
+        existing = self._existing_card(canonical_claim)
+        if existing is not None:
+            return existing
+
         api_key = getattr(settings, "GEMINI_API_KEY", "")
         card_copy = self._generate_copy(
             canonical_claim.text,
             canonical_claim.concept.name,
             api_key,
         )
-
-        flashcard, _ = Flashcard.objects.get_or_create(
-            source_claim=canonical_claim,
-            defaults={
-                "title": card_copy.get("title", canonical_claim.concept.name),
-                "prompt": card_copy.get("prompt", f"What is the key takeaway regarding {canonical_claim.concept.name}?"),
-                "answer": card_copy.get("answer", canonical_claim.text),
-                "explanation": card_copy.get("explanation", "Verified canonical knowledge card."),
-                "difficulty": card_copy.get("difficulty", Flashcard.DIFFICULTY_BEGINNER),
-                "card_type": card_copy.get("card_type", Flashcard.CARD_TYPE_RECALL),
-                "quiz_options": card_copy.get("quiz_options"),
-                "key_points": card_copy.get("key_points"),
-                "visual_hint": card_copy.get("visual_hint"),
-                "card_metadata_version": 1,
-                "is_active": True,
-                "created_by_ai": bool(api_key),
-            },
+        generation_method = card_copy.get("generation_method") or (
+            Flashcard.GENERATION_GEMINI if api_key else Flashcard.GENERATION_FALLBACK
         )
+
+        try:
+            with transaction.atomic():
+                flashcard, _ = Flashcard.objects.get_or_create(
+                    source_claim=canonical_claim,
+                    defaults={
+                        "title": card_copy.get("title", canonical_claim.concept.name),
+                        "prompt": card_copy.get("prompt", f"What is the key takeaway regarding {canonical_claim.concept.name}?"),
+                        "answer": card_copy.get("answer", canonical_claim.text),
+                        "explanation": card_copy.get("explanation", "Verified canonical knowledge card."),
+                        "difficulty": card_copy.get("difficulty", Flashcard.DIFFICULTY_BEGINNER),
+                        "card_type": card_copy.get("card_type", Flashcard.CARD_TYPE_RECALL),
+                        "quiz_options": card_copy.get("quiz_options"),
+                        "key_points": card_copy.get("key_points"),
+                        "visual_hint": card_copy.get("visual_hint"),
+                        "card_metadata_version": 1,
+                        "is_active": True,
+                        "created_by_ai": generation_method == Flashcard.GENERATION_GEMINI,
+                        "generation_method": generation_method,
+                    },
+                )
+        except IntegrityError:
+            # A concurrent worker created the card first (unique active card per claim).
+            flashcard = self._existing_card(canonical_claim)
+            if flashcard is None:
+                raise
         return flashcard
+
+    @staticmethod
+    def _existing_card(canonical_claim):
+        return (
+            Flashcard.objects.filter(source_claim=canonical_claim)
+            .order_by("-is_active", "id")
+            .first()
+        )
 
     def _generate_copy(self, claim_text: str, concept_name: str, api_key: str) -> dict:
         if not api_key:
@@ -140,6 +166,7 @@ Output JSON strictly as:
                 card_copy["quiz_options"] = None
             if card_copy["card_type"] == Flashcard.CARD_TYPE_CONCEPT_VISUAL:
                 card_copy["visual_hint"] = card_copy["visual_hint"] or "💡"
+            card_copy["generation_method"] = Flashcard.GENERATION_GEMINI
             return card_copy
         except Exception as e:
             logger.warning("Flashcard generation LLM error %s", e)
@@ -225,4 +252,5 @@ Output JSON strictly as:
             "quiz_options": None,
             "key_points": [],
             "visual_hint": "",
+            "generation_method": Flashcard.GENERATION_FALLBACK,
         }

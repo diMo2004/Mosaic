@@ -68,8 +68,34 @@ class Flashcard(models.Model):
         help_text='Short label or emoji for concept_visual diagram area',
     )
     card_metadata_version = models.PositiveSmallIntegerField(default=0, editable=False)
+
+    GENERATION_GEMINI = 'gemini'
+    GENERATION_FALLBACK = 'fallback'
+    GENERATION_UNKNOWN = 'unknown'
+    GENERATION_CHOICES = [
+        (GENERATION_GEMINI, 'Gemini'),
+        (GENERATION_FALLBACK, 'Deterministic fallback'),
+        (GENERATION_UNKNOWN, 'Unknown (legacy)'),
+    ]
+    # Distinguishes model-written copy from the deterministic fallback template.
+    generation_method = models.CharField(
+        max_length=16,
+        choices=GENERATION_CHOICES,
+        default=GENERATION_UNKNOWN,
+    )
+
     class Meta:
         ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['source_claim'],
+                condition=models.Q(is_active=True, source_claim__isnull=False),
+                name='unique_active_flashcard_per_canonical_claim',
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['is_active', '-created_at'], name='flashcard_active_recent_idx'),
+        ]
 
     def __str__(self):
         return self.title

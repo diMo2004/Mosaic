@@ -28,21 +28,41 @@ export interface UseFeedReturn {
     markUnderstood: (cardId: number) => Promise<void>;
     refresh: () => void;
     loadMore: () => void;
+    /** Ask the server for cards generated since the session ran out, keeping position. */
+    checkForNewCards: () => void;
     isLoadingMore: boolean;
     sessionExhausted: boolean;
     sessionComplete: boolean;
+    paginationError: string | null;
 }
+
+const DEFAULT_RECHECK_SECONDS = 120;
 
 function normaliseResponse(res: FlashcardListResponse): FlashcardDTO[] {
     return Array.isArray(res) ? res : res.results ?? [];
 }
 
-export function useFlashcardFeed(): UseFeedReturn {
+function errorMessage(err: unknown, fallback: string): string {
+    const apiMessage = (err as {
+        response?: { data?: { detail?: string } };
+        message?: string;
+    })?.response?.data?.detail;
+    return apiMessage ?? (err as { message?: string })?.message ?? fallback;
+}
+
+/**
+ * @param active  whether the feed screen is focused and the app foregrounded;
+ *                exhausted-session rechecks only run while active.
+ */
+export function useFlashcardFeed(active = true): UseFeedReturn {
     const [cards, setCards] = useState<FlashcardDTO[]>([]);
     const [status, setStatus] = useState<FeedStatus>('idle');
     const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [sessionExhausted, setSessionExhausted] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [paginationError, setPaginationError] = useState<string | null>(null);
+    const [recheckSeconds, setRecheckSeconds] = useState(DEFAULT_RECHECK_SECONDS);
+    const loadingMoreRef = useRef(false);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [viewStates, setViewStates] = useState<Record<number, CardViewState>>({});
     const [seenCardIds, setSeenCardIds] = useState<Set<number>>(new Set());
@@ -71,6 +91,10 @@ export function useFlashcardFeed(): UseFeedReturn {
             if (!Array.isArray(response) && typeof response.session_exhausted === 'boolean') {
                 setSessionExhausted(response.session_exhausted);
             }
+            if (!Array.isArray(response) && response.retry_after_seconds) {
+                setRecheckSeconds(response.retry_after_seconds);
+            }
+            setPaginationError(null);
             setCards(nextCards);
             setViewStates(previous => {
                 const next: Record<number, CardViewState> = {};
@@ -87,20 +111,20 @@ export function useFlashcardFeed(): UseFeedReturn {
                 setCurrentIndex(0);
             }
         } catch (err: unknown) {
-            const apiMessage = (err as {
-                response?: { data?: { detail?: string } };
-                message?: string;
-            })?.response?.data?.detail;
-            const message = apiMessage ?? (err as { message?: string })?.message;
-            setError(message ?? 'Failed to load feed');
+            setError(errorMessage(err, 'Failed to load feed'));
             setStatus('error');
         }
     }, []);
 
-    const loadMore = useCallback(async () => {
-        if (isLoadingMore || sessionExhausted || status === 'loading' || status === 'refreshing') {
+    // Fetch the next page of the same server session. `force` also asks after the
+    // session was exhausted, which returns cards persisted since then (the server
+    // excludes everything already served in this session, so nothing repeats).
+    const fetchMore = useCallback(async (force: boolean) => {
+        if (loadingMoreRef.current || (!force && sessionExhausted) || status === 'loading' || status === 'refreshing') {
             return;
         }
+        if (!sessionIdRef.current) return;
+        loadingMoreRef.current = true;
         setIsLoadingMore(true);
         try {
             const response = await getFlashcards(sessionIdRef.current);
@@ -108,6 +132,10 @@ export function useFlashcardFeed(): UseFeedReturn {
             if (!Array.isArray(response) && typeof response.session_exhausted === 'boolean') {
                 setSessionExhausted(response.session_exhausted);
             }
+            if (!Array.isArray(response) && response.retry_after_seconds) {
+                setRecheckSeconds(response.retry_after_seconds);
+            }
+            setPaginationError(null);
             if (additionalCards.length > 0) {
                 setCards(prev => {
                     const existingIds = new Set(prev.map(c => c.id));
@@ -124,12 +152,25 @@ export function useFlashcardFeed(): UseFeedReturn {
                     return next;
                 });
             }
-        } catch {
-            // Silently swallow pagination errors to not disturb active swiping
+        } catch (err: unknown) {
+            // Keep the current cards on screen; the next scroll/recheck retries.
+            setPaginationError(errorMessage(err, 'Could not load more cards'));
         } finally {
+            loadingMoreRef.current = false;
             setIsLoadingMore(false);
         }
-    }, [isLoadingMore, sessionExhausted, status]);
+    }, [sessionExhausted, status]);
+
+    const loadMore = useCallback(() => { void fetchMore(false); }, [fetchMore]);
+    const checkForNewCards = useCallback(() => { void fetchMore(true); }, [fetchMore]);
+
+    // While the session is exhausted and the feed is visible, periodically ask for
+    // newly verified cards instead of requiring a manual refresh.
+    useEffect(() => {
+        if (!active || !sessionExhausted || status !== 'success') return;
+        const timer = setInterval(checkForNewCards, Math.max(recheckSeconds, 30) * 1000);
+        return () => clearInterval(timer);
+    }, [active, sessionExhausted, status, recheckSeconds, checkForNewCards]);
 
     useEffect(() => {
         void load();
@@ -153,11 +194,14 @@ export function useFlashcardFeed(): UseFeedReturn {
             });
         }
 
-        // Prefetch next batch when user gets within 3 cards of the bottom
+        // Prefetch next batch when user gets within 3 cards of the bottom; at the
+        // very last card of an exhausted session, check once for new cards.
         if (index >= cards.length - 3 && !sessionExhausted && !isLoadingMore) {
-            void loadMore();
+            loadMore();
+        } else if (index === cards.length - 1 && sessionExhausted && !isLoadingMore) {
+            checkForNewCards();
         }
-    }, [cards, sessionExhausted, isLoadingMore, loadMore]);
+    }, [cards, sessionExhausted, isLoadingMore, loadMore, checkForNewCards]);
 
     const patchViewState = useCallback(
         (cardId: number, patch: Partial<CardViewState>) => {
@@ -227,8 +271,10 @@ export function useFlashcardFeed(): UseFeedReturn {
         markUnderstood,
         refresh,
         loadMore,
+        checkForNewCards,
         isLoadingMore,
         sessionExhausted,
         sessionComplete,
+        paginationError,
     };
 }

@@ -25,6 +25,7 @@ class FlashcardSerializer(serializers.ModelSerializer):
         allow_null=True,
     )
     evidence = serializers.SerializerMethodField()
+    attribution = serializers.SerializerMethodField()
 
     class Meta:
         model = Flashcard
@@ -45,6 +46,7 @@ class FlashcardSerializer(serializers.ModelSerializer):
             "concept_id",
             "concept_name",
             "evidence",
+            "attribution",
             "created_at",
             "updated_at",
             "is_saved",
@@ -69,7 +71,10 @@ class FlashcardSerializer(serializers.ModelSerializer):
     def get_evidence(self, obj):
         if not obj.source_claim or not obj.source_claim.source_claim:
             return []
-        items = obj.source_claim.source_claim.evidence_items.select_related('source')
+        # Placeholder evidence is an internal verification artefact, not provenance.
+        items = obj.source_claim.source_claim.evidence_items.select_related('source').exclude(
+            source__access_method='placeholder',
+        )
         return [
             {
                 "source": item.source.name,
@@ -81,6 +86,23 @@ class FlashcardSerializer(serializers.ModelSerializer):
             }
             for item in items
         ]
+
+    def get_attribution(self, obj):
+        """License/attribution notice for the source the card was derived from."""
+        extracted = obj.source_claim.source_claim if obj.source_claim else None
+        document = extracted.source_document if extracted else None
+        if document is None or document.uploaded_note_id:
+            return None
+        policy = (document.metadata or {}).get('policy') or {}
+        return {
+            "source": document.source.name if document.source_id else "",
+            "title": document.title,
+            "url": document.url,
+            "license": policy.get('license', document.source.license if document.source_id else ''),
+            "license_url": policy.get('license_url', ''),
+            "attribution": policy.get('attribution_text', ''),
+            "retrieved_at": document.retrieved_at,
+        }
     
 class FlashcardFeedbackSerializer(serializers.ModelSerializer):
     class Meta:

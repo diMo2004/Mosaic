@@ -11,9 +11,10 @@ class FlashcardAdmin(admin.ModelAdmin):
         "source_claim",
         "is_active",
         "created_by_ai",
+        "generation_method",
         "created_at",
     ]
-    list_filter = ["difficulty", "is_active", "created_by_ai"]
+    list_filter = ["difficulty", "is_active", "created_by_ai", "generation_method"]
     search_fields = ["title", "prompt", "answer", "explanation"]
 
 class PlaylistItemInline(admin.TabularInline):

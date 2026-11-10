@@ -110,6 +110,28 @@ class SourceDocument(models.Model):
     metadata = models.JSONField(default=dict, blank=True)
     retrieved_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    # Incremental external ingestion: provider ID, normalized-content hash, and
+    # version chain. A changed source creates a new current version; the old
+    # version and the knowledge derived from it are retained for provenance.
+    external_id = models.CharField(max_length=255, blank=True, db_index=True)
+    content_hash = models.CharField(max_length=64, blank=True, db_index=True)
+    is_current = models.BooleanField(default=True)
+    superseded_by = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='previous_versions',
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['source', 'url'],
+                condition=models.Q(is_current=True) & ~models.Q(url=''),
+                name='unique_current_document_per_source_url',
+            ),
+        ]
 
     def __str__(self):
         return self.title
@@ -202,6 +224,12 @@ class CanonicalClaim(models.Model):
     created_by_ai = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    # SHA-256 of the normalized claim text; used to avoid duplicate canonical
+    # claims (and cards) when several sources state the same fact.
+    text_hash = models.CharField(max_length=64, blank=True, db_index=True)
+    # Asynchronous flashcard generation bookkeeping (bounded retries).
+    flashcard_attempts = models.PositiveSmallIntegerField(default=0)
+    flashcard_error = models.TextField(blank=True)
 
     class Meta:
         indexes = [
@@ -338,3 +366,113 @@ class UnmappedConceptReview(models.Model):
 
     def __str__(self):
         return f"Review of '{self.suggested_name}' - Status: {self.status}"
+
+class SourceDiscoveryCheckpoint(models.Model):
+    """Durable discovery position for one adapter + topic query."""
+
+    adapter = models.CharField(max_length=32)
+    topic_key = models.CharField(max_length=255)
+    topic = models.CharField(max_length=255)
+    concept = models.ForeignKey(
+        Concept,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='discovery_checkpoints',
+    )
+    cursor = models.JSONField(default=dict, blank=True)
+    exhausted = models.BooleanField(default=False)
+    # Lease prevents overlapping discovery runs from paging the same query.
+    lease_until = models.DateTimeField(null=True, blank=True)
+    next_run_at = models.DateTimeField(null=True, blank=True)
+    last_run_at = models.DateTimeField(null=True, blank=True)
+    last_success_at = models.DateTimeField(null=True, blank=True)
+    runs = models.PositiveIntegerField(default=0)
+    candidates_total = models.PositiveIntegerField(default=0)
+    last_candidates = models.PositiveIntegerField(default=0)
+    consecutive_failures = models.PositiveIntegerField(default=0)
+    last_error = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['adapter', 'topic']
+        constraints = [
+            models.UniqueConstraint(fields=['adapter', 'topic_key'], name='unique_discovery_checkpoint'),
+        ]
+
+    def __str__(self):
+        return f"{self.adapter}: {self.topic}"
+
+
+class IngestionJob(models.Model):
+    """One discovered provider record moving through fetch -> policy -> pipeline."""
+
+    STATUS_PENDING = 'pending'
+    STATUS_PROCESSING = 'processing'
+    STATUS_RETRY = 'retry'
+    STATUS_SUCCEEDED = 'succeeded'
+    STATUS_UNCHANGED = 'unchanged'
+    STATUS_SKIPPED = 'skipped'
+    STATUS_POLICY_REJECTED = 'policy_rejected'
+    STATUS_FAILED = 'failed'
+
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending'),
+        (STATUS_PROCESSING, 'Processing'),
+        (STATUS_RETRY, 'Waiting to retry'),
+        (STATUS_SUCCEEDED, 'Succeeded'),
+        (STATUS_UNCHANGED, 'Unchanged (deduplicated)'),
+        (STATUS_SKIPPED, 'Skipped (insufficient content)'),
+        (STATUS_POLICY_REJECTED, 'Rejected by source policy'),
+        (STATUS_FAILED, 'Failed permanently'),
+    ]
+    CLAIMABLE_STATUSES = (STATUS_PENDING, STATUS_RETRY)
+    TERMINAL_STATUSES = (STATUS_SUCCEEDED, STATUS_UNCHANGED, STATUS_SKIPPED, STATUS_POLICY_REJECTED, STATUS_FAILED)
+
+    adapter = models.CharField(max_length=32)
+    external_id = models.CharField(max_length=255)
+    identifier = models.CharField(max_length=512)
+    fetch_kwargs = models.JSONField(default=dict, blank=True)
+    title = models.CharField(max_length=255, blank=True)
+    url = models.URLField(max_length=1000, blank=True)
+    topic = models.CharField(max_length=255, blank=True)
+    topic_concept = models.ForeignKey(
+        Concept,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='ingestion_jobs',
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    max_attempts = models.PositiveSmallIntegerField(default=4)
+    next_attempt_at = models.DateTimeField(null=True, blank=True)
+    locked_until = models.DateTimeField(null=True, blank=True)
+    last_error = models.TextField(blank=True)
+    source_document = models.ForeignKey(
+        SourceDocument,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='ingestion_jobs',
+    )
+    result = models.JSONField(default=dict, blank=True)
+    discovered_at = models.DateTimeField(auto_now_add=True)
+    enqueued_at = models.DateTimeField(null=True, blank=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-discovered_at']
+        constraints = [
+            models.UniqueConstraint(fields=['adapter', 'external_id'], name='unique_ingestion_job_per_record'),
+        ]
+        indexes = [
+            models.Index(fields=['status', 'next_attempt_at']),
+            models.Index(fields=['adapter', 'status']),
+        ]
+
+    def __str__(self):
+        return f"{self.adapter}:{self.external_id} ({self.status})"

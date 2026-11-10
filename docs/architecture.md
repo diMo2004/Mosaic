@@ -56,12 +56,31 @@ Django + DRF + SimpleJWT
 Local: SQLite for non-vector development or Docker Postgres 16 with pgvector
 CI and Render: PostgreSQL
 pgvector for evidence embeddings and semantic retrieval
-Celery + Redis for asynchronous evidence embedding
+Celery + Redis for asynchronous evidence embedding, note processing,
+  and continuous external ingestion (Celery Beat schedule, `ingestion` queue)
 OCR: Gemini + Azure fallback
 LLM: Gemini for extraction/assignment
 ```
 
 DRF is used because the Expo mobile app consumes JSON APIs. JWT is used because the app is mobile/API-first rather than a traditional cookie-session website.
+
+## Continuous external ingestion
+
+Approved external sources feed the same verification path as uploaded notes:
+
+```text
+Beat → discover (taxonomy topics, checkpoints) → IngestionJob → fetch → LicenseChecker
+     → SourceDocument (content-hash versioned) → ExtractedClaim → evidence/verification
+     → CanonicalClaim (deduplicated) → on-commit flashcard task → Flashcard → feed
+```
+
+Claims never become canonical knowledge without passing verification. The
+evidence for a claim is either a grounded passage from a curated source
+(self-attestation) or the normal evidence retrieval and Gemini fact-check.
+Every item passes the source policy (`docs/source_policy.md`). Reddit is
+restricted to evidence only. LLM calls run outside database transactions, and
+all side effects are idempotent under retries. Details, configuration and
+operations are in `docs/ingestion.md`.
 
 ## Mobile navigation and learning delivery
 

@@ -89,6 +89,106 @@ CELERY_TASK_ROUTES = {
     'knowledge.tasks.generate_evidence_embedding_task': {'queue': 'embeddings'},
 }
 
+
+def env_bool(name, default="False"):
+    return env(name, default).lower() in ("1", "true", "yes")
+
+
+def env_list(name, default=""):
+    return [part.strip() for part in env(name, default).split(",") if part.strip()]
+
+
+# --- Continuous external ingestion (docs/ingestion.md) ------------------------
+# Ingestion and deferred flashcard generation run on their own queue so slow
+# provider calls never starve OCR/embedding work. Workers must consume it.
+INGESTION_TASK_QUEUE = env("INGESTION_TASK_QUEUE", "ingestion")
+CELERY_TASK_ROUTES.update({
+    name: {'queue': INGESTION_TASK_QUEUE}
+    for name in (
+        'knowledge.schedule_external_discovery',
+        'knowledge.discover_adapter',
+        'knowledge.process_ingestion_job',
+        'knowledge.recover_ingestion_jobs',
+        'learning.generate_flashcard_for_claim',
+        'learning.backfill_missing_flashcards',
+    )
+})
+
+INGESTION_SCHEDULE_ENABLED = env_bool("INGESTION_SCHEDULE_ENABLED", "False")
+INGESTION_DISCOVERY_INTERVAL_MINUTES = int(env("INGESTION_DISCOVERY_INTERVAL_MINUTES", "60"))
+INGESTION_ENABLED_ADAPTERS = env_list(
+    "INGESTION_ENABLED_ADAPTERS", "wikimedia,official_docs,stackexchange,arxiv,github",
+)
+INGESTION_TOPICS_PER_RUN = int(env("INGESTION_TOPICS_PER_RUN", "3"))
+INGESTION_DEFAULT_MAX_CANDIDATES_PER_RUN = int(env("INGESTION_MAX_CANDIDATES_PER_RUN", "5"))
+INGESTION_MAX_CANDIDATES_PER_RUN = {
+    name: int(env(f"INGESTION_{name.upper()}_MAX_PER_RUN", str(INGESTION_DEFAULT_MAX_CANDIDATES_PER_RUN)))
+    for name in ("wikimedia", "arxiv", "github", "stackexchange", "reddit", "official_docs")
+}
+INGESTION_MAX_ATTEMPTS = int(env("INGESTION_MAX_ATTEMPTS", "4"))
+INGESTION_REVISIT_DAYS = int(env("INGESTION_REVISIT_DAYS", "7"))
+INGESTION_REQUEUE_PENDING_MINUTES = int(env("INGESTION_REQUEUE_PENDING_MINUTES", "30"))
+INGESTION_MIN_DOCUMENT_CHARS = int(env("INGESTION_MIN_DOCUMENT_CHARS", "30"))
+INGESTION_GROUNDING_MIN_COVERAGE = float(env("INGESTION_GROUNDING_MIN_COVERAGE", "0.75"))
+INGESTION_LOW_INVENTORY_THRESHOLD = int(env("INGESTION_LOW_INVENTORY_THRESHOLD", "200"))
+INGESTION_GITHUB_MIN_STARS = int(env("INGESTION_GITHUB_MIN_STARS", "500"))
+INGESTION_STACKEXCHANGE_MIN_ANSWER_SCORE = int(env("INGESTION_STACKEXCHANGE_MIN_ANSWER_SCORE", "5"))
+# Wikimedia requires a descriptive User-Agent with contact details.
+INGESTION_USER_AGENT = env(
+    "INGESTION_USER_AGENT",
+    "MosaicKnowledgeBot/1.0 (educational flashcards; contact: set INGESTION_USER_AGENT) python-requests",
+)
+# Minimum seconds between requests per domain (provider-documented limits).
+INGESTION_DEFAULT_MIN_INTERVAL_SECONDS = 1.0
+INGESTION_DOMAIN_MIN_INTERVAL_SECONDS = {
+    "export.arxiv.org": 3.0,           # arXiv: 1 request / 3 s
+    "api.github.com": 2.5 if env("GITHUB_TOKEN") else 6.5,  # search: 30/min auth, 10/min anon
+    "api.stackexchange.com": 0.5,
+    "en.wikipedia.org": 1.0,
+    "oauth.reddit.com": 1.0,
+    "docs.python.org": 2.0,
+    "developer.mozilla.org": 2.0,
+    "www.typescriptlang.org": 2.0,
+}
+# Policies with status "requires_review" (official_docs:java, official_docs:cpp)
+# stay blocked unless listed here after a documented legal review.
+INGESTION_REVIEWED_SOURCES = env_list("INGESTION_REVIEWED_SOURCES", "")
+INGESTION_REQUIRE_COMMERCIAL_USE = env_bool("INGESTION_REQUIRE_COMMERCIAL_USE", "False")
+REDDIT_LEGAL_REVIEW_APPROVED = env_bool("REDDIT_LEGAL_REVIEW_APPROVED", "False")
+REDDIT_CLIENT_ID = env("REDDIT_CLIENT_ID", "")
+REDDIT_CLIENT_SECRET = env("REDDIT_CLIENT_SECRET", "")
+INGESTION_REDDIT_SUBREDDITS = env_list("INGESTION_REDDIT_SUBREDDITS", "compsci,learnprogramming")
+GITHUB_TOKEN = env("GITHUB_TOKEN", "")
+STACKEXCHANGE_API_KEY = env("STACKEXCHANGE_API_KEY", "")
+
+FLASHCARD_GENERATION_MAX_ATTEMPTS = int(env("FLASHCARD_GENERATION_MAX_ATTEMPTS", "4"))
+FLASHCARD_BACKFILL_BATCH_SIZE = int(env("FLASHCARD_BACKFILL_BATCH_SIZE", "50"))
+FLASHCARD_BACKFILL_GRACE_MINUTES = int(env("FLASHCARD_BACKFILL_GRACE_MINUTES", "5"))
+
+CELERY_BEAT_SCHEDULE = {}
+if INGESTION_SCHEDULE_ENABLED:
+    CELERY_BEAT_SCHEDULE = {
+        "external-discovery": {
+            "task": "knowledge.schedule_external_discovery",
+            "schedule": INGESTION_DISCOVERY_INTERVAL_MINUTES * 60.0,
+        },
+        "recover-ingestion-jobs": {
+            "task": "knowledge.recover_ingestion_jobs",
+            "schedule": 10 * 60.0,
+        },
+        "backfill-missing-flashcards": {
+            "task": "learning.backfill_missing_flashcards",
+            "schedule": 15 * 60.0,
+        },
+    }
+
+# A shared cache (e.g. redis://host:6379/2) lets rate limits, provider
+# cool-downs, and the taxonomy graph cache be shared by all worker processes.
+# Without it each process keeps its own in-memory cache.
+CACHE_URL = env("CACHE_URL", "")
+if CACHE_URL:
+    CACHES = {"default": {"BACKEND": "django.core.cache.backends.redis.RedisCache", "LOCATION": CACHE_URL}}
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -271,3 +371,15 @@ CORS_ALLOWED_ORIGINS = [
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+LOG_LEVEL = env("LOG_LEVEL", "INFO")
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {"plain": {"format": "%(asctime)s %(levelname)s %(name)s %(message)s"}},
+    "handlers": {"console": {"class": "logging.StreamHandler", "formatter": "plain"}},
+    "loggers": {
+        app: {"handlers": ["console"], "level": LOG_LEVEL, "propagate": False}
+        for app in ("knowledge", "learning", "verification")
+    },
+}

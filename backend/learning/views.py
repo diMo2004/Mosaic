@@ -1,8 +1,11 @@
 from django.shortcuts import render
 from django.shortcuts import get_object_or_404
-from django.db.models import Count, F, Q, Sum
+import logging
+
+from django.db.models import Case, Count, Exists, F, IntegerField, OuterRef, Q, Subquery, Sum, Value, When
+from django.db.models.functions import Coalesce
 from django.utils import timezone
-from datetime import datetime, timedelta, timezone as datetime_timezone
+from datetime import timedelta
 from uuid import UUID, uuid4
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
@@ -13,26 +16,53 @@ from knowledge.models import CanonicalClaim, Concept
 from .services.rag_explanation import RAGExplanationServiceError
 from users.permissions import IsProfileComplete
 from .services.mastery_service import MasteryService
-# Create your views here.
+
+logger = logging.getLogger(__name__)
 
 def active_flashcards():
     return Flashcard.objects.filter(
         is_active=True
     ).select_related(
         "source_claim__concept",
-        "source_claim__source_claim",
+        "source_claim__source_claim__source_document__source",
     )
 
+
+def feed_eligible_flashcards():
+    """Cards the public feed may serve: active, with an active verified canonical claim."""
+    return active_flashcards().filter(
+        source_claim__isnull=False,
+        source_claim__is_active=True,
+    )
+
+
+FEED_REPEAT_COOLDOWN = timedelta(days=7)
+FEED_RECENT_SERVE_PENALTY = timedelta(hours=24)
+FEED_EXHAUSTED_RETRY_SECONDS = 120
+
+
 class FlashcardFeedView(generics.ListAPIView):
+    """Server-ranked, continuously replenished feed.
+
+    Pagination uses a server-side session cursor: ``session_id`` identifies the
+    feed session and every card already served in it is excluded, so pages
+    never repeat and newly persisted cards appear on the next page without a
+    client reset. Ranking (all in the database):
+
+    0. never viewed and not served to this user in the last 24h, newest first;
+    1. viewed/served, but not within the 7-day cool-down, least recent first;
+    2. viewed/served recently, least recent first (only when inventory is short).
+
+    Within a page, cards are interleaved by concept to avoid runs of one topic.
+    """
     serializer_class = FlashcardSerializer
     permission_classes = [permissions.IsAuthenticated, IsProfileComplete]
 
     def get_queryset(self):
-        return active_flashcards()
+        return feed_eligible_flashcards()
 
     def list(self, request, *args, **kwargs):
-        """Return a fresh, server-ranked batch without session repetition."""
-        raw_session_id = request.query_params.get("session_id")
+        raw_session_id = request.query_params.get("session_id") or request.query_params.get("cursor")
         try:
             session_id = UUID(raw_session_id) if raw_session_id else uuid4()
         except (TypeError, ValueError):
@@ -43,36 +73,48 @@ class FlashcardFeedView(generics.ListAPIView):
         except ValueError:
             limit = 20
 
-        served_ids = set(
-            FlashcardFeedEvent.objects.filter(
-                user=request.user,
-                session_id=session_id,
-            ).values_list("flashcard_id", flat=True)
+        now = timezone.now()
+        user_events = FlashcardFeedEvent.objects.filter(user=request.user, flashcard=OuterRef("pk"))
+        candidates = (
+            self.get_queryset()
+            .exclude(Exists(user_events.filter(session_id=session_id)))
+            .annotate(
+                last_viewed=Subquery(
+                    UserProgress.objects.filter(user=request.user, flashcard=OuterRef("pk"))
+                    .values("last_viewed_at")[:1]
+                ),
+                last_served=Subquery(
+                    user_events.filter(event_type=FlashcardFeedEvent.EVENT_SERVED)
+                    .order_by("-created_at").values("created_at")[:1]
+                ),
+            )
+            .annotate(last_seen=Coalesce("last_viewed", "last_served"))
+            .annotate(
+                feed_tier=Case(
+                    When(last_viewed__isnull=True, last_served__isnull=True, then=Value(0)),
+                    When(last_viewed__isnull=True, last_served__lt=now - FEED_RECENT_SERVE_PENALTY, then=Value(0)),
+                    When(last_seen__lt=now - FEED_REPEAT_COOLDOWN, then=Value(1)),
+                    default=Value(2),
+                    output_field=IntegerField(),
+                )
+            )
+            .order_by("feed_tier", F("last_seen").asc(nulls_first=True), "-created_at", "-id")
         )
-        candidates = list(active_flashcards().exclude(id__in=served_ids))
-        if not candidates:
-            return Response({
+        pool = list(candidates[: limit * 3])
+        if not pool:
+            logger.info("feed.page.empty eligible_total=%s", self.get_queryset().count())
+            response = Response({
                 "results": [],
                 "session_id": str(session_id),
+                "cursor": str(session_id),
+                "has_more": False,
                 "session_exhausted": True,
+                "retry_after_seconds": FEED_EXHAUSTED_RETRY_SECONDS,
             })
+            response["Cache-Control"] = "no-store"
+            return response
 
-        recent_cutoff = timezone.now() - timedelta(days=7)
-        progress = {
-            item.flashcard_id: item
-            for item in UserProgress.objects.filter(
-                user=request.user,
-                flashcard_id__in=[card.id for card in candidates],
-            )
-        }
-
-        # Unseen cards lead; previously viewed cards follow from least-recently seen.
-        candidates.sort(key=lambda card: (
-            1 if progress.get(card.id) and progress[card.id].last_viewed_at and progress[card.id].last_viewed_at >= recent_cutoff else 0,
-            progress[card.id].last_viewed_at if progress.get(card.id) and progress[card.id].last_viewed_at else datetime.min.replace(tzinfo=datetime_timezone.utc),
-            card.id,
-        ))
-        selected = candidates[:limit]
+        selected = self._interleave_by_concept(pool)[:limit]
         FlashcardFeedEvent.objects.bulk_create([
             FlashcardFeedEvent(
                 user=request.user,
@@ -82,11 +124,35 @@ class FlashcardFeedView(generics.ListAPIView):
             )
             for card in selected
         ])
-        return Response({
+        exhausted = len(selected) == len(pool)
+        response = Response({
             "results": self.get_serializer(selected, many=True).data,
             "session_id": str(session_id),
-            "session_exhausted": len(selected) == len(candidates),
+            "cursor": str(session_id),
+            "has_more": not exhausted,
+            "session_exhausted": exhausted,
+            "repeated_count": sum(1 for card in selected if card.feed_tier == 2),
+            "retry_after_seconds": FEED_EXHAUSTED_RETRY_SECONDS if exhausted else None,
         })
+        response["Cache-Control"] = "no-store"
+        return response
+
+    @staticmethod
+    def _interleave_by_concept(cards):
+        """Stable round-robin across concepts within each tier."""
+        ordered = []
+        for tier in sorted({card.feed_tier for card in cards}):
+            buckets = {}
+            for card in cards:
+                if card.feed_tier == tier:
+                    buckets.setdefault(card.source_claim.concept_id, []).append(card)
+            queues = list(buckets.values())
+            while queues:
+                for queue in list(queues):
+                    ordered.append(queue.pop(0))
+                    if not queue:
+                        queues.remove(queue)
+        return ordered
 
 
 class TopicSearchView(APIView):

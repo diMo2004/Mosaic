@@ -11,6 +11,16 @@ export interface EvidenceItem {
     relevance_score: string;
 }
 
+export interface SourceAttribution {
+    source: string;
+    title: string;
+    url: string;
+    license: string;
+    license_url: string;
+    attribution: string;
+    retrieved_at: string | null;
+}
+
 export interface QuizOption {
     text: string;
     is_correct: boolean;
@@ -34,6 +44,7 @@ export interface FlashcardDTO {
     concept_id: number | null;
     concept_name: string | null;
     evidence: EvidenceItem[];
+    attribution?: SourceAttribution | null;
     created_at: string;
     updated_at: string;
     is_saved: boolean;
@@ -42,7 +53,21 @@ export interface FlashcardDTO {
 
 export type FlashcardListResponse = 
     | FlashcardDTO[] 
-    | { results: FlashcardDTO[]; count?: number; next?: string | null; previous?: string | null; session_id?: string; session_exhausted?: boolean };
+    | {
+        results: FlashcardDTO[];
+        count?: number;
+        next?: string | null;
+        previous?: string | null;
+        session_id?: string;
+        /** Server-side session cursor; equal to session_id. */
+        cursor?: string;
+        has_more?: boolean;
+        session_exhausted?: boolean;
+        /** How many cards in this page are repeats from recent sessions (inventory is short). */
+        repeated_count?: number;
+        /** When exhausted, how long to wait before asking again for newly generated cards. */
+        retry_after_seconds?: number | null;
+    };
 
 export interface TopicSearchResponse {
     query: string;

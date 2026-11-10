@@ -1,12 +1,13 @@
 // Public flashcard feed
 // Displays cards with concept tag, canonical claim, and provenance indicator.
-// Backend Endpoint: GET /api/learning/feed/
+// Backend Endpoint: GET /api/learning/flashcards/?session_id=<cursor>
 
-import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { ProfileMenu } from '@/components/ProfileMenu';
 import {
     ActivityIndicator,
+    AppState,
     FlatList,
     RefreshControl,
     StyleSheet,
@@ -20,7 +21,9 @@ import { useFlashcardFeed } from '@/hooks/useFlashcardFeed';
 import type { FlashcardDTO } from '@/types/flashcard';
 
 export default function FeedScreen({ navigation }: any) {
-    const feed = useFlashcardFeed();
+    const isFocused = useIsFocused();
+    const [appActive, setAppActive] = useState(AppState.currentState === 'active');
+    const feed = useFlashcardFeed(isFocused && appActive);
     const [viewportHeight, setViewportHeight] = useState(0);
     const listRef = useRef<FlatList<FlashcardDTO>>(null);
     const onCardVisibleRef = useRef(feed.onCardVisible);
@@ -74,21 +77,29 @@ export default function FeedScreen({ navigation }: any) {
         [viewportHeight],
     );
 
-    const progressWidth = useMemo(() => {
-        if (!feed.cards.length) return '0%' as `${number}%`;
-        return `${((feed.currentIndex + 1) / feed.cards.length) * 100}%` as `${number}%`;
-    }, [feed.currentIndex, feed.cards.length]);
-
     const refreshFeed = useCallback(() => {
         listRef.current?.scrollToOffset({ offset: 0, animated: false });
         feed.refresh();
     }, [feed.refresh]);
 
+    // Returning to the feed (from a card detail, another tab, or the background)
+    // pulls in newly generated cards for the same session without resetting the
+    // user's position. Pull-to-refresh starts a fresh session.
+    const { checkForNewCards } = feed;
     const hasOpenedRef = useRef(false);
     useFocusEffect(useCallback(() => {
-        if (hasOpenedRef.current) refreshFeed();
+        if (hasOpenedRef.current) checkForNewCards();
         hasOpenedRef.current = true;
-    }, [refreshFeed]));
+    }, [checkForNewCards]));
+
+    useEffect(() => {
+        const subscription = AppState.addEventListener('change', state => {
+            const nowActive = state === 'active';
+            setAppActive(nowActive);
+            if (nowActive && hasOpenedRef.current) checkForNewCards();
+        });
+        return () => subscription.remove();
+    }, [checkForNewCards]);
 
     if (feed.status === 'idle' || feed.status === 'loading') {
         return (
@@ -157,7 +168,17 @@ export default function FeedScreen({ navigation }: any) {
 
                     {feed.sessionComplete && (
                         <View pointerEvents="none" style={styles.endHint}>
-                            <Text style={styles.endHintText}>You’ve viewed every card · pull down to refresh</Text>
+                            <Text style={styles.endHintText}>
+                                {feed.isLoadingMore
+                                    ? 'Checking for new cards…'
+                                    : 'You’re all caught up · new verified cards appear here automatically'}
+                            </Text>
+                        </View>
+                    )}
+
+                    {feed.paginationError && !feed.sessionComplete && (
+                        <View pointerEvents="none" style={styles.endHint}>
+                            <Text style={styles.endHintText}>Couldn’t load more cards · retrying as you scroll</Text>
                         </View>
                     )}
                 </>
@@ -167,7 +188,7 @@ export default function FeedScreen({ navigation }: any) {
                 <View style={styles.center}>
                     <Text style={styles.title}>No flashcards yet</Text>
                     <Text style={styles.secondary}>
-                        Cards appear after knowledge is verified and supported. Upload a note to start the review process.
+                        Cards appear after knowledge from notes and approved sources is verified. New cards are added continuously; check back soon or upload a note.
                     </Text>
                     <TouchableOpacity style={styles.retry} onPress={() => navigation.navigate('Upload')}>
                         <Text style={styles.retryText}>Upload a note</Text>
@@ -208,16 +229,6 @@ const styles = StyleSheet.create({
         borderRadius: 10,
     },
     retryText: { color: '#e2e8f0', fontWeight: '700' },
-    progressTrack: {
-        position: 'absolute',
-        top: 0,
-        left: 20,
-        right: 20,
-        height: 3,
-        backgroundColor: '#1e293b',
-        borderRadius: 2,
-    },
-    progressFill: { height: 3, backgroundColor: '#38bdf8', borderRadius: 2 },
     profileControl: {
         position: 'absolute',
         top: 12,

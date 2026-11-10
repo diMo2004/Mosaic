@@ -1,6 +1,6 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
-from .views import SourceDocumentViewSet, CanonicalClaimViewSet, ExtractedClaimReviewViewSet, EvidenceViewSet, SourceViewSet
+from .views import SourceDocumentViewSet, CanonicalClaimViewSet, ExtractedClaimReviewViewSet, EvidenceViewSet, SourceViewSet, IngestionRunView, IngestionStatusView
 
 router = DefaultRouter()
 router.register("sources", SourceViewSet, basename="source")
@@ -10,5 +10,7 @@ router.register("canonical-claims", CanonicalClaimViewSet, basename="canonical-c
 router.register("source-documents", SourceDocumentViewSet, basename="source-document")
 
 urlpatterns = [
+    path("ingestion/status/", IngestionStatusView.as_view(), name="ingestion-status"),
+    path("ingestion/run/", IngestionRunView.as_view(), name="ingestion-run"),
     path("", include(router.urls)),
 ]

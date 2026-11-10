@@ -49,15 +49,37 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     container_name: mosaic-worker
-    command: celery -A config worker --loglevel=INFO --concurrency=2 -Q ocr,embeddings,celery
+    command: celery -A config worker --loglevel=INFO --concurrency=2 -Q ocr,embeddings,celery,ingestion
     restart: unless-stopped
-    environment:
+    environment: &worker-env
       - DEBUG=True
       - SECRET_KEY=local-dev-secret-key
       - DATABASE_URL=postgres://mosaic_user:mosaic_password@db:5432/mosaic_db
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      # Shared cache so provider rate limits/cool-downs apply across worker processes.
+      - CACHE_URL=redis://redis:6379/2
       - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      - STACKEXCHANGE_API_KEY=${STACKEXCHANGE_API_KEY:-}
+      - INGESTION_USER_AGENT=${INGESTION_USER_AGENT:-MosaicKnowledgeBot/1.0 (local development)}
+      - INGESTION_SCHEDULE_ENABLED=${INGESTION_SCHEDULE_ENABLED:-False}
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - ./backend:/app
+
+  # Celery Beat: exactly one instance. Schedules discovery, job recovery, and the
+  # missing-flashcard sweep when INGESTION_SCHEDULE_ENABLED=True.
+  beat:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: mosaic-beat
+    command: celery -A config beat --loglevel=INFO --schedule /tmp/celerybeat-schedule
+    restart: unless-stopped
+    environment: *worker-env
     depends_on:
       - db
       - redis

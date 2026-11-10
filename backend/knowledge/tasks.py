@@ -91,3 +91,55 @@ def embed_evidence_task(
         "status": "embedded",
         "evidence_id": evidence_id,
     }
+
+# --- Scheduled external ingestion -------------------------------------------
+# Imports are local to the task bodies: the ingestion pipeline imports this
+# module (embed_evidence_task), so module-level imports would be circular.
+
+
+@shared_task(name="knowledge.schedule_external_discovery", ignore_result=True)
+def schedule_external_discovery_task() -> dict:
+    """Beat entry point: fan out one discovery task per enabled adapter."""
+    from knowledge.ingestion.registry import enabled_adapters
+
+    adapters = enabled_adapters()
+    for adapter_name in adapters:
+        discover_adapter_task.delay(adapter_name)
+    logger.info("ingestion.schedule.dispatched adapters=%s", adapters)
+    return {"adapters": adapters}
+
+
+@shared_task(name="knowledge.discover_adapter", acks_late=True, ignore_result=True)
+def discover_adapter_task(adapter_name: str, topic: str | None = None, limit: int | None = None) -> dict:
+    close_old_connections()
+    from knowledge.ingestion.jobs import DiscoveryService
+
+    return DiscoveryService(adapter_name).run(topic=topic, limit=limit).as_dict()
+
+
+@shared_task(
+    bind=True,
+    name="knowledge.process_ingestion_job",
+    acks_late=True,
+    ignore_result=True,
+    max_retries=None,  # bounded by IngestionJob.max_attempts
+)
+def process_ingestion_job_task(self, job_id: int) -> dict:
+    close_old_connections()
+    from knowledge.ingestion.jobs import IngestionJobService, JobRetry
+
+    try:
+        job = IngestionJobService().process(job_id)
+    except JobRetry as retry:
+        raise self.retry(countdown=retry.countdown)
+    if job is None:
+        return {"job_id": job_id, "status": "not_claimed"}
+    return {"job_id": job_id, "status": job.status}
+
+
+@shared_task(name="knowledge.recover_ingestion_jobs", ignore_result=True)
+def recover_ingestion_jobs_task() -> dict:
+    close_old_connections()
+    from knowledge.ingestion.jobs import recover_stale_jobs
+
+    return recover_stale_jobs()

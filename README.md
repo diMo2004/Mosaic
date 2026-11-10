@@ -106,8 +106,13 @@ From `Mosaic\backend` with the venv active, run migrations and start a Celery wo
 ```powershell
 python manage.py migrate
 python manage.py createsuperuser
-celery -A config worker --loglevel=INFO --concurrency=2 -Q ocr,embeddings,celery
+celery -A config worker --loglevel=INFO --concurrency=2 -Q ocr,embeddings,celery,ingestion
 ```
+
+For continuous external ingestion, also run exactly one scheduler with `INGESTION_SCHEDULE_ENABLED=True`
+(`celery -A config beat --loglevel=INFO`), or trigger a bounded run with
+`python manage.py run_ingestion --adapter wikimedia --topic "binary search tree" --limit 3 --sync`.
+See `docs/ingestion.md` and `docs/source_policy.md`.
 
 In a second `Mosaic\backend` terminal with the same venv active, start the API:
 

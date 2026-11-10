@@ -321,10 +321,23 @@ Category 9 — Real RAG — DONE
 Evidence embeddings are generated asynchronously with Celery and Redis.
 The explain endpoint performs semantic retrieval and validates citations.
 
-Category 10 — External ingestion — Done
+Category 10 — External ingestion — Done (single-record fetch); continuous ingestion — IMPLEMENTED, PENDING VERIFICATION
 
 40–43: adapters (GitHub, Stack Exchange, arXiv, Wikimedia), license checks, pipeline — DONE.
 Reddit: evidence only, after legal review. Prefer official CSE/docs sources first.
+
+43a. Continuous ingestion (docs/ingestion.md, docs/source_policy.md) — IMPLEMENTED, tests written but NOT yet run; not yet deployed:
+  - Adapter discovery + registry for all six sources (Wikimedia search, arXiv search, GitHub repo search,
+    Stack Exchange search, official-docs index/sitemap walking, Reddit OAuth evidence-only)
+  - LicenseChecker applies to every item and fails closed; Oracle Java and isocpp.org blocked pending review;
+    Reddit blocked until REDDIT_LEGAL_REVIEW_APPROVED
+  - Durable IngestionJob + SourceDiscoveryCheckpoint, leases, bounded retries, recovery sweep
+  - Content-hash versioning of SourceDocument, canonical-claim dedupe, one active card per claim
+  - Deferred, idempotent flashcard generation + missing-card backfill sweep; generation_method labelling
+  - Taxonomy graph now loaded from Concept/ConceptRelationship (previously always empty)
+  - Ops: run_ingestion, ingestion_status, staff API, admin actions
+  Remaining to mark DONE: run the test suite; deploy worker with -Q ingestion + one Beat process
+  with INGESTION_SCHEDULE_ENABLED=True; observe ingestion_status showing new eligible cards.
 
 Category 11 — Recommendations — TODO
 
@@ -356,9 +369,10 @@ Category 14 — Scale — PARTIAL
  
 56. Search Scaling: pg_trgm GIN indexes and full-text search before external OpenSearch.
 57. Graph Scaling: Redis serialization cache for NetworkX graph before dedicated graph DB.
-58. Worker Segmentation: Dedicated Celery queues for heavy pipelines (ocr, embeddings, ingestion).
+58. Worker Segmentation: Dedicated Celery queues for heavy pipelines (ocr, embeddings, ingestion). — ingestion queue IMPLEMENTED
+    (note: the existing ocr/embeddings route keys do not match the registered task names, so those tasks still use the default queue)
 59. Observability & Health Checks: /api/health/ for DB, Cache, and worker status.
-60. Scheduled External Ingestion: Celery Beat periodic batch ingestion during off-peak hours with Redis token-bucket per-domain rate limiting — PARTIAL
+60. Scheduled External Ingestion: Celery Beat periodic batch ingestion with per-domain rate limiting (shared via CACHE_URL) and provider back-off — IMPLEMENTED, PENDING VERIFICATION (see 43a)
 
 Category 15 — Social — TODO (do not start)
 
