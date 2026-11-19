@@ -9,7 +9,10 @@ from django.db.models import F
 from django.utils import timezone
 
 from knowledge.models import CanonicalClaim
-from learning.services.flashcard_service import FlashcardGenerationService
+from learning.services.flashcard_service import (
+    FlashcardGenerationService,
+    environment_for_extracted_claim,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -28,10 +31,14 @@ def _max_attempts() -> int:
 def generate_flashcard_for_claim_task(self, canonical_claim_id: int) -> dict:
     """Generate (idempotently) the flashcard for a verified canonical claim."""
     close_old_connections()
-    claim = CanonicalClaim.objects.select_related("concept").filter(pk=canonical_claim_id, is_active=True).first()
+    claim = CanonicalClaim.objects.select_related(
+        "concept",
+        "source_claim__source_document__uploaded_note__owner",
+    ).filter(pk=canonical_claim_id, is_active=True).first()
     if claim is None:
         return {"status": "missing", "canonical_claim_id": canonical_claim_id}
-    if claim.flashcards.exists():
+    environment, owner = environment_for_extracted_claim(claim.source_claim)
+    if FlashcardGenerationService._existing_card(claim, environment=environment, owner=owner) is not None:
         return {"status": "exists", "canonical_claim_id": canonical_claim_id}
     if claim.flashcard_attempts >= _max_attempts():
         logger.error("flashcard.generation.exhausted canonical_claim=%s error=%s", claim.id, claim.flashcard_error[:200])
@@ -39,7 +46,11 @@ def generate_flashcard_for_claim_task(self, canonical_claim_id: int) -> dict:
 
     CanonicalClaim.objects.filter(pk=claim.pk).update(flashcard_attempts=F("flashcard_attempts") + 1)
     try:
-        flashcard = FlashcardGenerationService().generate_from_canonical_claim(claim)
+        flashcard = FlashcardGenerationService().generate_from_canonical_claim(
+            claim,
+            environment=environment,
+            owner=owner,
+        )
     except Exception as exc:
         CanonicalClaim.objects.filter(pk=claim.pk).update(flashcard_error=f"{type(exc).__name__}: {exc}"[:2000])
         logger.warning("flashcard.generation.failed canonical_claim=%s retry=%s", claim.id, self.request.retries, exc_info=True)

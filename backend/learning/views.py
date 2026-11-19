@@ -29,10 +29,36 @@ def active_flashcards():
 
 
 def feed_eligible_flashcards():
-    """Cards the public feed may serve: active, with an active verified canonical claim."""
+    """Cards the public feed may serve: active, with an active verified canonical claim and public environment."""
     return active_flashcards().filter(
+        environment=Flashcard.ENVIRONMENT_PUBLIC,
         source_claim__isnull=False,
         source_claim__is_active=True,
+    )
+
+
+def personal_feed_eligible_flashcards(user):
+    """Cards the personal feed may serve for an owner."""
+    if not user or not user.is_authenticated:
+        return Flashcard.objects.none()
+    return active_flashcards().filter(
+        environment=Flashcard.ENVIRONMENT_PERSONAL,
+        owner=user,
+    )
+
+
+def user_feed_eligible_flashcards(user):
+    """Public feed cards plus personal cards owned by the authenticated user."""
+    return feed_eligible_flashcards() | personal_feed_eligible_flashcards(user)
+
+
+def accessible_flashcards(user):
+    """Cards accessible by the given user: public cards or owned personal cards."""
+    if not user or not user.is_authenticated:
+        return active_flashcards().filter(environment=Flashcard.ENVIRONMENT_PUBLIC)
+    return active_flashcards().filter(
+        Q(environment=Flashcard.ENVIRONMENT_PUBLIC)
+        | Q(environment=Flashcard.ENVIRONMENT_PERSONAL, owner=user)
     )
 
 
@@ -59,6 +85,11 @@ class FlashcardFeedView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated, IsProfileComplete]
 
     def get_queryset(self):
+        env = self.request.query_params.get("environment", Flashcard.ENVIRONMENT_PUBLIC)
+        if env == Flashcard.ENVIRONMENT_PERSONAL:
+            return personal_feed_eligible_flashcards(self.request.user)
+        if env == "all":
+            return user_feed_eligible_flashcards(self.request.user)
         return feed_eligible_flashcards()
 
     def list(self, request, *args, **kwargs):
@@ -145,7 +176,8 @@ class FlashcardFeedView(generics.ListAPIView):
             buckets = {}
             for card in cards:
                 if card.feed_tier == tier:
-                    buckets.setdefault(card.source_claim.concept_id, []).append(card)
+                    concept_key = card.source_claim.concept_id if card.source_claim else "uncategorized"
+                    buckets.setdefault(concept_key, []).append(card)
             queues = list(buckets.values())
             while queues:
                 for queue in list(queues):
@@ -153,6 +185,13 @@ class FlashcardFeedView(generics.ListAPIView):
                     if not queue:
                         queues.remove(queue)
         return ordered
+
+
+class PersonalFlashcardFeedView(FlashcardFeedView):
+    """Dedicated endpoint for personal-environment flashcards."""
+
+    def get_queryset(self):
+        return personal_feed_eligible_flashcards(self.request.user)
 
 
 class TopicSearchView(APIView):
@@ -164,10 +203,30 @@ class TopicSearchView(APIView):
         if not query:
             return Response({"detail": "A topic query is required."}, status=status.HTTP_400_BAD_REQUEST)
 
+        cards_for_user = accessible_flashcards(request.user)
+        # Concepts are broad (e.g. "Computer Science & Engineering"), so a topic like
+        # "git" usually lives in card and claim text rather than in a concept name.
+        keyword_cards = list(
+            cards_for_user.filter(
+                Q(title__icontains=query)
+                | Q(prompt__icontains=query)
+                | Q(answer__icontains=query)
+                | Q(source_claim__text__icontains=query)
+            ).order_by("-created_at")[:30]
+        )
+
+        def results_for(concept_cards):
+            merged, seen = [], set()
+            for card in [*keyword_cards, *concept_cards]:
+                if card.id not in seen:
+                    seen.add(card.id)
+                    merged.append(card)
+            return FlashcardSerializer(merged[:30], many=True, context={"request": request}).data
+
         # 1. Exact match (case-insensitive)
         exact = Concept.objects.filter(name__iexact=query).first()
         if exact:
-            cards = active_flashcards().filter(source_claim__concept=exact)
+            cards = cards_for_user.filter(source_claim__concept=exact)[:30]
             return Response({
                 "query": query,
                 "taxonomy_match": {
@@ -178,7 +237,8 @@ class TopicSearchView(APIView):
                     "name": exact.name,
                 },
                 "suggestions": [{"concept_id": exact.id, "name": exact.name, "score": 1.0}],
-                "results": FlashcardSerializer(cards[:30], many=True, context={"request": request}).data,
+                "keyword_match_count": len(keyword_cards),
+                "results": results_for(cards),
             })
 
         # 2. Substring & Trigram/Fuzzy matching
@@ -203,7 +263,9 @@ class TopicSearchView(APIView):
             target_name = best_concept_dict["name"]
             is_confident = best_score >= 0.70
 
-            cards = active_flashcards().filter(source_claim__concept_id=target_id)
+            # A weak fuzzy match is only a suggestion; do not fill results with an
+            # unrelated concept's cards.
+            cards = cards_for_user.filter(source_claim__concept_id=target_id)[:30] if is_confident else []
             suggestions = [
                 {"concept_id": item[1]["id"], "name": item[1]["name"], "score": round(item[0], 2)}
                 for item in top_matches
@@ -219,10 +281,11 @@ class TopicSearchView(APIView):
                     "name": target_name,
                 },
                 "suggestions": suggestions,
-                "results": FlashcardSerializer(cards[:30], many=True, context={"request": request}).data,
+                "keyword_match_count": len(keyword_cards),
+                "results": results_for(cards),
             })
 
-        # 3. No match found
+        # 3. No concept match; keyword matches may still exist
         return Response({
             "query": query,
             "taxonomy_match": {
@@ -233,7 +296,8 @@ class TopicSearchView(APIView):
                 "name": None,
             },
             "suggestions": [],
-            "results": [],
+            "keyword_match_count": len(keyword_cards),
+            "results": results_for([]),
         })
 
     
@@ -242,7 +306,7 @@ class FlashcardDetailView(generics.RetrieveAPIView):
     permission_classes = [permissions.IsAuthenticated, IsProfileComplete]
 
     def get_queryset(self):
-        return active_flashcards()
+        return accessible_flashcards(self.request.user)
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -267,7 +331,7 @@ class FlashcardViewedView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsProfileComplete]
 
     def post(self, request, pk):
-        flashcard = get_object_or_404(active_flashcards(), pk=pk)
+        flashcard = get_object_or_404(accessible_flashcards(request.user), pk=pk)
         record_flashcard_view(request.user, flashcard)
         try:
             session_id = UUID(request.data.get("session_id"))
@@ -295,7 +359,7 @@ class SaveFlashCardView(APIView):
 
     def post(self, request, pk):
         flashcard = get_object_or_404(
-            active_flashcards(), 
+            accessible_flashcards(request.user), 
             pk=pk, 
         )
         playlist_id = request.data.get("playlist_id")
@@ -321,7 +385,7 @@ class SaveFlashCardView(APIView):
 
     def delete(self, request, pk):
         flashcard = get_object_or_404(
-            active_flashcards(),
+            accessible_flashcards(request.user),
             pk=pk
         )
 
@@ -344,7 +408,7 @@ class FlashcardFeedbackView(APIView):
 
     def post(self, request, pk):
         flashcard = get_object_or_404(
-            active_flashcards(),
+            accessible_flashcards(request.user),
             pk=pk
         )
         serializer = FlashcardFeedbackSerializer(data=request.data)
@@ -544,7 +608,7 @@ class FlashcardUnderstoodView(APIView):
 
     def post(self, request, pk):
         flashcard = get_object_or_404(
-            active_flashcards(),
+            accessible_flashcards(request.user),
             pk=pk
         )
         understood = request.data.get("understood", True)

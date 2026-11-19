@@ -151,6 +151,33 @@ class ClaimVerificationServiceTests(TestCase):
         self.assertEqual(CanonicalClaim.objects.count(), 0)
         self.assertEqual(Flashcard.objects.count(), 0)
 
+    @patch("verification.services.concept_assignment.ConceptAssignmentService")
+    def test_supported_uploaded_note_claim_creates_personal_flashcard(self, MockConceptService):
+        concept = Concept.objects.create(name="BFS", slug="bfs-note")
+        mock_instance = MagicMock()
+        mock_instance.assign_concept.return_value = concept
+        MockConceptService.return_value = mock_instance
+
+        note = Note.objects.create(
+            owner=self.user,
+            title="User Note",
+        )
+        self.document.uploaded_note = note
+        self.document.save(update_fields=["uploaded_note"])
+
+        Evidence.objects.create(
+            claim=self.claim,
+            source=self.source,
+            relation=Evidence.SUPPORTS,
+            excerpt="BFS uses a queue.",
+            relevance_score=0.90,
+        )
+        result = ClaimVerificationService().verify_claim(self.claim)
+        card = result["flashcard"]
+        self.assertIsNotNone(card)
+        self.assertEqual(card.environment, Flashcard.ENVIRONMENT_PERSONAL)
+        self.assertEqual(card.owner, self.user)
+
 @override_settings(
     CELERY_TASK_ALWAYS_EAGER=True,
     CELERY_TASK_EAGER_PROPAGATES=True,

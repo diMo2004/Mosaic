@@ -79,6 +79,7 @@ export interface TopicSearchResponse {
         match_type?: 'exact' | 'fuzzy' | 'none';
     };
     suggestions: { concept_id: number; name: string; score?: number }[];
+    keyword_match_count?: number;
     results: FlashcardDTO[];
 }
     

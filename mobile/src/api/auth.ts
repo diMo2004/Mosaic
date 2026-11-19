@@ -1,18 +1,18 @@
 // Login, register, Google, complete-profile
 import { apiClient } from './client';
-import * as SecureStore from 'expo-secure-store';
+import { deleteStoredItem, setStoredItem } from './tokenStore';
 
 export const login = async (username: string, password: string) => {
     const res = await apiClient.post('/api/auth/login/', { username, password });
-    await SecureStore.setItemAsync('accessToken', res.data.access);
-    await SecureStore.setItemAsync('refreshToken', res.data.refresh);
+    await setStoredItem('accessToken', res.data.access);
+    await setStoredItem('refreshToken', res.data.refresh);
     return res.data;
 };
 
 export const register = async (username: string, email: string, password: string) => {
     const res = await apiClient.post('/api/auth/register/', { username, email, password });
-    await SecureStore.setItemAsync('accessToken', res.data.access);
-    await SecureStore.setItemAsync('refreshToken', res.data.refresh);
+    await setStoredItem('accessToken', res.data.access);
+    await setStoredItem('refreshToken', res.data.refresh);
     return res.data;
 };
 
@@ -24,10 +24,10 @@ export const completeProfile = async (data: {
 }) => {
     const res = await apiClient.post('/api/auth/complete-profile/', data);
     if (res.data.access) {
-        await SecureStore.setItemAsync('accessToken', res.data.access);
+        await setStoredItem('accessToken', res.data.access);
     }
     if (res.data.refresh) {
-        await SecureStore.setItemAsync('refreshToken', res.data.refresh);
+        await setStoredItem('refreshToken', res.data.refresh);
     }
     return res.data;
 };
@@ -37,6 +37,6 @@ export const getProfile = async () => {
 };
 
 export const logout = async () => {
-    await SecureStore.deleteItemAsync('accessToken');
-    await SecureStore.deleteItemAsync('refreshToken');
+    await deleteStoredItem('accessToken');
+    await deleteStoredItem('refreshToken');
 };

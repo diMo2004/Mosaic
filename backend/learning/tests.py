@@ -634,3 +634,199 @@ class GroundedExplanationAPITests(APITestCase):
             response.status_code,
             status.HTTP_401_UNAUTHORIZED,
         )
+
+
+class PersonalFlashcardEnvironmentTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="learner1", password="pass12345")
+        self.user.profile.profile_completed = True
+        self.user.profile.save()
+
+        self.other = User.objects.create_user(username="learner2", password="pass12345")
+        self.other.profile.profile_completed = True
+        self.other.profile.save()
+
+        self.concept = Concept.objects.create(name="Merge Sort", slug="merge-sort")
+        self.source = Source.objects.create(
+            name="Textbook",
+            source_type=Source.SOURCE_TYPE_EDUCATIONAL,
+            authority_score=0.95,
+        )
+        self.document = SourceDocument.objects.create(
+            source=self.source,
+            title="Sorting",
+            document_type=SourceDocument.DOCUMENT_TYPE_WEBPAGE,
+            raw_text="Merge Sort runs in O(N log N) time.",
+        )
+        self.extracted = ExtractedClaim.objects.create(
+            source_document=self.document,
+            text="Merge Sort runs in O(N log N) time.",
+        )
+        self.canonical = CanonicalClaim.objects.create(
+            concept=self.concept,
+            text="Merge Sort runs in O(N log N) time.",
+            source_claim=self.extracted,
+            is_active=True,
+        )
+
+        # Public card
+        self.public_card = Flashcard.objects.create(
+            title="Public Merge Sort Card",
+            prompt="What is Merge Sort complexity?",
+            answer="O(N log N)",
+            explanation="Divide and conquer algorithm.",
+            difficulty=Flashcard.DIFFICULTY_BEGINNER,
+            card_type=Flashcard.CARD_TYPE_RECALL,
+            source_claim=self.canonical,
+            environment=Flashcard.ENVIRONMENT_PUBLIC,
+            owner=None,
+            is_active=True,
+        )
+
+        # Personal card for user 1
+        self.personal_card_user1 = Flashcard.objects.create(
+            title="User1 Personal Card",
+            prompt="Personal note takeaway?",
+            answer="Divide and conquer.",
+            explanation="Personal note card.",
+            difficulty=Flashcard.DIFFICULTY_INTERMEDIATE,
+            card_type=Flashcard.CARD_TYPE_RECALL,
+            source_claim=self.canonical,
+            environment=Flashcard.ENVIRONMENT_PERSONAL,
+            owner=self.user,
+            is_active=True,
+        )
+
+        # Personal card for user 2
+        self.personal_card_user2 = Flashcard.objects.create(
+            title="User2 Personal Card",
+            prompt="User 2 personal question?",
+            answer="Recurrence T(n)=2T(n/2)+O(n)",
+            explanation="Master theorem case 2.",
+            difficulty=Flashcard.DIFFICULTY_ADVANCED,
+            card_type=Flashcard.CARD_TYPE_RECALL,
+            source_claim=self.canonical,
+            environment=Flashcard.ENVIRONMENT_PERSONAL,
+            owner=self.other,
+            is_active=True,
+        )
+
+    def test_personal_flashcard_generation_service(self):
+        concept2 = Concept.objects.create(name="Quick Sort", slug="quick-sort")
+        canonical2 = CanonicalClaim.objects.create(
+            concept=concept2,
+            text="Quick Sort average time is O(N log N).",
+            source_claim=self.extracted,
+            is_active=True,
+        )
+        mock_copy = {
+            "title": "Quick Sort",
+            "prompt": "What is the average runtime?",
+            "answer": "O(N log N)",
+            "explanation": "Partition based sort.",
+            "difficulty": Flashcard.DIFFICULTY_BEGINNER,
+            "card_type": Flashcard.CARD_TYPE_RECALL,
+        }
+        with patch.object(FlashcardGenerationService, "_generate_copy", return_value=mock_copy):
+            card = FlashcardGenerationService().generate_from_canonical_claim(
+                canonical2,
+                environment=Flashcard.ENVIRONMENT_PERSONAL,
+                owner=self.user,
+            )
+        self.assertEqual(card.environment, Flashcard.ENVIRONMENT_PERSONAL)
+        self.assertEqual(card.owner, self.user)
+
+    def test_public_feed_excludes_personal_flashcards(self):
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get("/api/learning/flashcards/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        card_ids = [c["id"] for c in response.data["results"]]
+        self.assertIn(self.public_card.id, card_ids)
+        self.assertNotIn(self.personal_card_user1.id, card_ids)
+        self.assertNotIn(self.personal_card_user2.id, card_ids)
+
+    def test_personal_feed_returns_only_owned_cards(self):
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get("/api/learning/flashcards/personal/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        card_ids = [c["id"] for c in response.data["results"]]
+        self.assertIn(self.personal_card_user1.id, card_ids)
+        self.assertNotIn(self.public_card.id, card_ids)
+        self.assertNotIn(self.personal_card_user2.id, card_ids)
+
+        # Also test ?environment=personal query param
+        response_param = self.client.get("/api/learning/flashcards/?environment=personal")
+        self.assertEqual(response_param.status_code, status.HTTP_200_OK)
+        param_ids = [c["id"] for c in response_param.data["results"]]
+        self.assertIn(self.personal_card_user1.id, param_ids)
+        self.assertNotIn(self.personal_card_user2.id, param_ids)
+
+    def test_personal_card_detail_isolation(self):
+        # User 2 cannot view User 1's personal card
+        self.client.force_authenticate(user=self.other)
+        response_other = self.client.get(f"/api/learning/flashcards/{self.personal_card_user1.id}/")
+        self.assertEqual(response_other.status_code, status.HTTP_404_NOT_FOUND)
+
+        # User 1 can view their own personal card
+        self.client.force_authenticate(user=self.user)
+        response_user = self.client.get(f"/api/learning/flashcards/{self.personal_card_user1.id}/")
+        self.assertEqual(response_user.status_code, status.HTTP_200_OK)
+        self.assertEqual(response_user.data["id"], self.personal_card_user1.id)
+        self.assertEqual(response_user.data["environment"], Flashcard.ENVIRONMENT_PERSONAL)
+        self.assertEqual(response_user.data["owner_id"], self.user.id)
+
+        # Both can view the public card
+        self.assertEqual(
+            self.client.get(f"/api/learning/flashcards/{self.public_card.id}/").status_code,
+            status.HTTP_200_OK,
+        )
+        self.client.force_authenticate(user=self.other)
+        self.assertEqual(
+            self.client.get(f"/api/learning/flashcards/{self.public_card.id}/").status_code,
+            status.HTTP_200_OK,
+        )
+
+    def test_personal_card_action_isolation(self):
+        # User 2 cannot save, give feedback, or mark understood User 1's personal card
+        self.client.force_authenticate(user=self.other)
+        save_resp = self.client.post(f"/api/learning/flashcards/{self.personal_card_user1.id}/save/")
+        self.assertEqual(save_resp.status_code, status.HTTP_404_NOT_FOUND)
+
+        understood_resp = self.client.post(f"/api/learning/flashcards/{self.personal_card_user1.id}/understood/")
+        self.assertEqual(understood_resp.status_code, status.HTTP_404_NOT_FOUND)
+
+        feedback_resp = self.client.post(
+            f"/api/learning/flashcards/{self.personal_card_user1.id}/feedback/",
+            {"feedback_type": "helpful", "comment": "Nice card"},
+            format="json",
+        )
+        self.assertEqual(feedback_resp.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_topic_search_does_not_leak_other_users_personal_cards(self):
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get("/api/learning/search/", {"topic": "Merge Sort"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        card_ids = [card["id"] for card in response.data["results"]]
+        self.assertIn(self.public_card.id, card_ids)
+        self.assertIn(self.personal_card_user1.id, card_ids)
+        self.assertNotIn(self.personal_card_user2.id, card_ids)
+
+    def test_topic_search_matches_keywords_inside_card_text(self):
+        git_card = Flashcard.objects.create(
+            title="Computer Science & Engineering",
+            prompt="Which command uploads local commits?",
+            answer="git push sends local commits to a remote repository.",
+            explanation="Version control.",
+            difficulty=Flashcard.DIFFICULTY_BEGINNER,
+            card_type=Flashcard.CARD_TYPE_RECALL,
+            environment=Flashcard.ENVIRONMENT_PUBLIC,
+            is_active=True,
+        )
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get("/api/learning/search/", {"topic": "git"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        card_ids = [card["id"] for card in response.data["results"]]
+        self.assertIn(git_card.id, card_ids)
+        self.assertNotIn(self.public_card.id, card_ids)
+        self.assertEqual(response.data["keyword_match_count"], 1)
+

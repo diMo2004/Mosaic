@@ -29,6 +29,9 @@ export default function SearchScreen({ navigation }: any) {
     <View className="flex-1 bg-canvas">
       <ScreenHeader title="Search" navigation={navigation} />
       <ScrollView keyboardShouldPersistTaps="handled" className="flex-1 px-5 pt-4">
+        <Text className="mb-3 text-sm text-slate-400">
+          Find flashcards on a topic. Matches concept names and any card or verified fact that mentions your keyword, for example "git" or "binary search".
+        </Text>
         {/* Search Input Bar */}
         <View className="flex-row items-center gap-2">
           <View className="flex-1">
@@ -63,7 +66,7 @@ export default function SearchScreen({ navigation }: any) {
                     Taxonomy Concept: {result.taxonomy_match.name}
                   </Text>
                 </View>
-                {result.taxonomy_match.confidence && (
+                {result.taxonomy_match.confidence != null && (
                   <Badge variant="success">
                     {Math.round(result.taxonomy_match.confidence * 100)}% match
                   </Badge>
@@ -78,7 +81,9 @@ export default function SearchScreen({ navigation }: any) {
                   </Text>
                 </View>
                 <Text className="mt-1 text-xs text-amber-300/80">
-                  Showing related concept flashcards and close matches below.
+                  {result.results.length > 0
+                    ? `Showing cards whose text mentions "${result.query}".`
+                    : 'No concept or card mentions this yet. Try a related topic below or upload a note about it.'}
                 </Text>
               </View>
             )}

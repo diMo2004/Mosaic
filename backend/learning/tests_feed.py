@@ -83,6 +83,24 @@ class FeedPaginationTests(APITestCase):
         self.assertNotIn(inactive_claim_card.id, ids)
         self.assertNotIn(orphan.id, ids)
 
+    def test_all_environment_includes_public_and_only_owned_personal_cards(self):
+        public_card = make_card(self.graphs, "Public graph fact")
+        own_personal_card = make_card(self.trees, "My uploaded note fact")
+        own_personal_card.environment = Flashcard.ENVIRONMENT_PERSONAL
+        own_personal_card.owner = self.user
+        own_personal_card.save(update_fields=["environment", "owner"])
+
+        other_user = User.objects.create_user(username="another-reader", password="pass12345")
+        other_personal_card = make_card(self.trees, "Another user's private fact")
+        other_personal_card.environment = Flashcard.ENVIRONMENT_PERSONAL
+        other_personal_card.owner = other_user
+        other_personal_card.save(update_fields=["environment", "owner"])
+
+        response = self.client.get(FEED_URL, {"environment": "all", "limit": 10})
+        self.assertEqual(response.status_code, 200)
+        card_ids = {card["id"] for card in response.data["results"]}
+        self.assertEqual(card_ids, {public_card.id, own_personal_card.id})
+
     def test_cross_session_ranking_prefers_unseen_then_least_recent(self):
         recent = make_card(self.graphs, "Recently viewed fact")
         older = make_card(self.graphs, "Viewed long ago fact")

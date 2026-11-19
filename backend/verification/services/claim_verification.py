@@ -8,7 +8,10 @@ from google import genai
 from google.genai import types
 from knowledge.models import CanonicalClaim, ExtractedClaim, Concept, Evidence
 from .evidence_retrieval import EvidenceRetrievalService
-from learning.services.flashcard_service import FlashcardGenerationService
+from learning.services.flashcard_service import (
+    FlashcardGenerationService,
+    environment_for_extracted_claim,
+)
 from knowledge.ingestion.normalize import claim_hash
 
 logger = logging.getLogger(__name__)
@@ -83,8 +86,11 @@ class ClaimVerificationService:
 
         flashcard = None
         if canonical_claim and not defer_flashcard:
+            environment, owner = environment_for_extracted_claim(extracted_claim)
             flashcard = FlashcardGenerationService().generate_from_canonical_claim(
-                canonical_claim
+                canonical_claim,
+                environment=environment,
+                owner=owner,
             )
 
         return {

@@ -125,7 +125,7 @@ export const CardShell: React.FC<CardShellProps> = ({
                     )}
                 </View>
                 <View style={styles.actionRight}>
-                    {card.canonical_claim_id && onOpenExplain && (
+                    {card.canonical_claim_id != null && onOpenExplain && (
                         <TouchableOpacity
                             activeOpacity={0.75}
                             onPress={onOpenExplain}
@@ -179,6 +179,7 @@ const styles = StyleSheet.create({
     topBar: {
         paddingTop: 8,
         paddingBottom: 12,
+        paddingRight: 56,
     },
     badgeRow: {
         flexDirection: 'row',

@@ -5,6 +5,7 @@ from .views import (
     FlashcardDetailView,
     FlashcardFeedbackView,
     FlashcardFeedView,
+    PersonalFlashcardFeedView,
     TopicSearchView,
     FlashcardUnderstoodView,
     FlashcardViewedView,
@@ -20,6 +21,7 @@ from .views import (
 
 urlpatterns = [
     path("flashcards/", FlashcardFeedView.as_view(), name="flashcard-feed"),
+    path("flashcards/personal/", PersonalFlashcardFeedView.as_view(), name="flashcard-personal-feed"),
     path("search/", TopicSearchView.as_view(), name="flashcard-topic-search"),
     path("flashcards/<int:pk>/", FlashcardDetailView.as_view(), name="flashcard-detail"),
     path("flashcards/<int:pk>/save/", SaveFlashCardView.as_view(), name="flashcard-save"),

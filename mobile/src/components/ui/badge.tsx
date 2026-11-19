@@ -40,7 +40,7 @@ export const Badge: React.FC<BadgeProps> = ({
 
     return (
         <View className={`self-start px-2.5 py-1 rounded-full border ${style.bg} ${className}`}>
-            {typeof children === 'string' ? (
+            {typeof children === 'string' || typeof children === 'number' || Array.isArray(children) ? (
                 <Text className={`text-xs font-bold tracking-wide ${style.text} ${textClassName}`}>
                     {children}
                 </Text>

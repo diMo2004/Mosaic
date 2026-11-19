@@ -35,6 +35,7 @@ CLI management command: ingest_external
 Questionnaires & 5-tier MCQ engine (Easy to Expert) with dynamic capped quotas & ratchet rule
 Concept MasteryBadge & Superset MasteryBadge (10 subtopics) models and services
 Understood action endpoint (POST /api/learning/flashcards/<id>/understood/)
+Personal vs public flashcard environments (Flashcard.environment public|personal, owner FK, GET /api/learning/flashcards/personal/ and note-derived personal cards)
 Learning, verification, and ingestion tests
 CI (pytest-equivalent: python manage.py test) + Docker image build + Render hook
 README local-setup section
@@ -46,7 +47,6 @@ Not started or incomplete:
 Expo / mobile app (scaffold and screen shells exist; styling & full wiring in progress)
 IsProfileComplete enforced on app APIs
 Auto-verify claims at the end of note processing (job often stops at CLAIMS_EXTRACTED)
-Personal vs public flashcard environments
 LLM flashcard copy
 S3/R2 media storage
 Celery workers for OCR/note processing, production retries, and monitoring
@@ -219,11 +219,11 @@ RAGExplanationService builds grounded prompts from canonical claim text and evid
 Citations are validated and provider/retrieval failures return controlled errors.
 ```
 
-Product rules already decided, not fully modeled:
+Product rules already decided:
 
 ```text
-Public environment: flashcards from shared canonical knowledge (current feed).
-Personal environment: flashcards derived from that user's notes (not implemented).
+Public environment: flashcards from shared canonical knowledge (default feed).
+Personal environment: flashcards derived from that user's verified notes (GET /api/learning/flashcards/personal/ or ?environment=personal).
 Save/unsave is playlist membership.
 ```
 
@@ -244,8 +244,6 @@ Note access (can_view_own_notes) is decoupled from badge rewards.
 Still needed:
 
 ```text
-environment/owner fields on Flashcard
-GET personal feed
 LLM-written cards
 Swipe sequences
 ```

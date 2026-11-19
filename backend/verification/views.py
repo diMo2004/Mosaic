@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404
 
 # Create your views here.
 from rest_framework import permissions, status
@@ -12,13 +12,12 @@ class VerifyClaimView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsProfileComplete]
 
     def post(self, request, pk):
-        try:
-            extracted_claim = ExtractedClaim.objects.get(id=pk)
-        except ExtractedClaim.DoesNotExist:
-            return Response(
-                {"error": "ExtractedClaim not found."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+        extracted_claim = get_object_or_404(
+            ExtractedClaim.objects.filter(
+                source_document__uploaded_note__owner=request.user,
+            ),
+            id=pk,
+        )
 
         verification_service = ClaimVerificationService()
         result = verification_service.verify_claim(extracted_claim)

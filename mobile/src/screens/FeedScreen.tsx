@@ -13,6 +13,7 @@ import {
     StyleSheet,
     Text,
     TouchableOpacity,
+    useWindowDimensions,
     View,
     ViewToken,
 } from 'react-native';
@@ -24,7 +25,11 @@ export default function FeedScreen({ navigation }: any) {
     const isFocused = useIsFocused();
     const [appActive, setAppActive] = useState(AppState.currentState === 'active');
     const feed = useFlashcardFeed(isFocused && appActive);
-    const [viewportHeight, setViewportHeight] = useState(0);
+    const window = useWindowDimensions();
+    const [measuredHeight, setMeasuredHeight] = useState(0);
+    // Web flex layouts often report a 0 height from onLayout, which left the
+    // loaded feed blank. Fall back to the window until a real measurement arrives.
+    const viewportHeight = measuredHeight > 0 ? measuredHeight : Math.max(window.height - 64, 240);
     const listRef = useRef<FlatList<FlashcardDTO>>(null);
     const onCardVisibleRef = useRef(feed.onCardVisible);
     onCardVisibleRef.current = feed.onCardVisible;
@@ -127,7 +132,9 @@ export default function FeedScreen({ navigation }: any) {
             style={styles.container}
             onLayout={event => {
                 const height = event.nativeEvent.layout.height;
-                setViewportHeight(current => current === height ? current : height);
+                if (height > 0) {
+                    setMeasuredHeight(current => current === height ? current : height);
+                }
             }}
         >
             {viewportHeight > 0 && feed.cards.length > 0 && (

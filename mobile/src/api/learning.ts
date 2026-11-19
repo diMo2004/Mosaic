@@ -4,7 +4,10 @@ import type { FlashcardDTO, FlashcardListResponse, TopicSearchResponse } from '@
 
 export const getFlashcards = async (sessionId?: string): Promise<FlashcardListResponse> => {
     return (await apiClient.get<FlashcardListResponse>('/api/learning/flashcards/', {
-        params: sessionId ? { session_id: sessionId } : undefined,
+        params: {
+            environment: 'all',
+            ...(sessionId ? { session_id: sessionId } : {}),
+        },
     })).data;
 };
 

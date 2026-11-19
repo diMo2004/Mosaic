@@ -9,8 +9,23 @@ from learning.models import Flashcard
 
 logger = logging.getLogger(__name__)
 
+
+def environment_for_extracted_claim(extracted_claim):
+    """Personal cards belong to the user who uploaded the source note.
+
+    Notes store that user on ``owner``. External evidence has no uploaded note
+    and stays on the public feed.
+    """
+    document = getattr(extracted_claim, "source_document", None) if extracted_claim is not None else None
+    note = getattr(document, "uploaded_note", None) if document is not None else None
+    owner = getattr(note, "owner", None) if note is not None else None
+    if owner is not None:
+        return Flashcard.ENVIRONMENT_PERSONAL, owner
+    return Flashcard.ENVIRONMENT_PUBLIC, None
+
+
 class FlashcardGenerationService:
-    def generate_from_canonical_claim(self, canonical_claim):
+    def generate_from_canonical_claim(self, canonical_claim, environment=Flashcard.ENVIRONMENT_PUBLIC, owner=None):
         """
         Generate flashcards from a given canonical claim.
         """
@@ -19,7 +34,7 @@ class FlashcardGenerationService:
 
         # Idempotent: any existing card (active or deliberately deactivated) for
         # this claim wins, and is checked before spending an LLM call.
-        existing = self._existing_card(canonical_claim)
+        existing = self._existing_card(canonical_claim, environment=environment, owner=owner)
         if existing is not None:
             return existing
 
@@ -33,38 +48,51 @@ class FlashcardGenerationService:
             Flashcard.GENERATION_GEMINI if api_key else Flashcard.GENERATION_FALLBACK
         )
 
+        lookup = {
+            "source_claim": canonical_claim,
+            "environment": environment,
+        }
+        if environment == Flashcard.ENVIRONMENT_PERSONAL:
+            lookup["owner"] = owner
+
+        defaults = {
+            "title": card_copy.get("title", canonical_claim.concept.name),
+            "prompt": card_copy.get("prompt", f"What is the key takeaway regarding {canonical_claim.concept.name}?"),
+            "answer": card_copy.get("answer", canonical_claim.text),
+            "explanation": card_copy.get("explanation", "Verified canonical knowledge card."),
+            "difficulty": card_copy.get("difficulty", Flashcard.DIFFICULTY_BEGINNER),
+            "card_type": card_copy.get("card_type", Flashcard.CARD_TYPE_RECALL),
+            "quiz_options": card_copy.get("quiz_options"),
+            "key_points": card_copy.get("key_points"),
+            "visual_hint": card_copy.get("visual_hint"),
+            "card_metadata_version": 1,
+            "is_active": True,
+            "created_by_ai": generation_method == Flashcard.GENERATION_GEMINI,
+            "generation_method": generation_method,
+            "environment": environment,
+            "owner": owner,
+        }
+
         try:
             with transaction.atomic():
                 flashcard, _ = Flashcard.objects.get_or_create(
-                    source_claim=canonical_claim,
-                    defaults={
-                        "title": card_copy.get("title", canonical_claim.concept.name),
-                        "prompt": card_copy.get("prompt", f"What is the key takeaway regarding {canonical_claim.concept.name}?"),
-                        "answer": card_copy.get("answer", canonical_claim.text),
-                        "explanation": card_copy.get("explanation", "Verified canonical knowledge card."),
-                        "difficulty": card_copy.get("difficulty", Flashcard.DIFFICULTY_BEGINNER),
-                        "card_type": card_copy.get("card_type", Flashcard.CARD_TYPE_RECALL),
-                        "quiz_options": card_copy.get("quiz_options"),
-                        "key_points": card_copy.get("key_points"),
-                        "visual_hint": card_copy.get("visual_hint"),
-                        "card_metadata_version": 1,
-                        "is_active": True,
-                        "created_by_ai": generation_method == Flashcard.GENERATION_GEMINI,
-                        "generation_method": generation_method,
-                    },
+                    **lookup,
+                    defaults=defaults,
                 )
         except IntegrityError:
-            # A concurrent worker created the card first (unique active card per claim).
-            flashcard = self._existing_card(canonical_claim)
+            # A concurrent worker created the card first.
+            flashcard = self._existing_card(canonical_claim, environment=environment, owner=owner)
             if flashcard is None:
                 raise
         return flashcard
 
     @staticmethod
-    def _existing_card(canonical_claim):
+    def _existing_card(canonical_claim, environment=Flashcard.ENVIRONMENT_PUBLIC, owner=None):
+        qs = Flashcard.objects.filter(source_claim=canonical_claim, environment=environment)
+        if environment == Flashcard.ENVIRONMENT_PERSONAL:
+            qs = qs.filter(owner=owner)
         return (
-            Flashcard.objects.filter(source_claim=canonical_claim)
-            .order_by("-is_active", "id")
+            qs.order_by("-is_active", "id")
             .first()
         )
 

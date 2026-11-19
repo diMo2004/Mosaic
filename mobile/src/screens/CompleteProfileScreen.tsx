@@ -3,7 +3,10 @@
 // Backend Endpoint: POST /api/auth/complete-profile/
 
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, Alert, Pressable } from 'react-native';
+import { View, Text, TextInput, Pressable } from 'react-native';
+import { notify as alertUser } from '@/utils/notify';
+
+const Alert = { alert: alertUser };
 import { completeProfile, getProfile } from '@/api/auth';
 
 export default function CompleteProfileScreen({ navigation, route }: any) {

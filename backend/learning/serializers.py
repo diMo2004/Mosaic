@@ -24,6 +24,11 @@ class FlashcardSerializer(serializers.ModelSerializer):
         read_only=True,
         allow_null=True,
     )
+    owner_id = serializers.IntegerField(
+        source='owner.id',
+        read_only=True,
+        allow_null=True,
+    )
     evidence = serializers.SerializerMethodField()
     attribution = serializers.SerializerMethodField()
 
@@ -40,6 +45,8 @@ class FlashcardSerializer(serializers.ModelSerializer):
             "quiz_options",
             "key_points",
             "visual_hint",
+            "environment",
+            "owner_id",
             "source_claim",
             "canonical_claim_id",
             "canonical_claim_text",

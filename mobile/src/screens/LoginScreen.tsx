@@ -1,9 +1,11 @@
 // Login & Register
 // Stores access and refresh in SecureStore. If response has status: "profile_required", navigates immediately to CompleteProfile.
-import React, { useState } from 'react';
-import { View, Text, TextInput, Button, Alert, ActivityIndicator} from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, TextInput, Button, ActivityIndicator} from 'react-native';
+import { notify } from '@/utils/notify';
 import axios from 'axios';
-import { login, register } from '@/api/auth';
+import { getProfile, login, register } from '@/api/auth';
+import { getStoredItem } from '@/api/tokenStore';
 
 function getAuthErrorMessage(error: unknown): string {
   if (!axios.isAxiosError(error)) {
@@ -11,16 +13,16 @@ function getAuthErrorMessage(error: unknown): string {
   }
 
   if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
-    return 'The local backend did not respond within 30 seconds. Check that the local tunnel and Django server are running, then try again.';
+    return 'The API did not respond in time. The Render service may be waking up. Wait a few seconds and try again.';
   }
   if (!error.response) {
-    return 'Could not reach the local backend. Restart the local tunnel launcher and confirm this app is using the current Expo session.';
+    return 'Could not reach the API. Check your network and EXPO_PUBLIC_API_URL, then restart Expo.';
   }
   if (error.response.status === 401) {
     return 'The username or password is incorrect.';
   }
   if (error.response.status === 503) {
-    return 'The local backend is running but cannot reach the Neon database. Check the backend terminal and DATABASE_URL.';
+    return 'The API is up, but the Neon database did not respond. Try again in a moment.';
   }
 
   const data = error.response.data as { detail?: unknown } | string | undefined;
@@ -39,10 +41,31 @@ export default function LoginScreen({navigation}: any) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [booting, setBooting] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const token = await getStoredItem('accessToken');
+        if (!token) return;
+        const profile = await getProfile();
+        if (cancelled) return;
+        navigation.replace(profile.profile_completed ? 'Main' : 'CompleteProfile', { profile });
+      } catch {
+        // A missing or expired session stays on the login screen.
+      } finally {
+        if (!cancelled) setBooting(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [navigation]);
 
   const handleSubmit = async () => {
     if(!username || !password || (isRegister && !email)) {
-      return Alert.alert('Validation', 'Please fill in all required fields.');
+      return notify('Validation', 'Please fill in all required fields.');
     }
     setLoading(true);
     try {
@@ -58,7 +81,7 @@ export default function LoginScreen({navigation}: any) {
         profile: result.profile,
       });
     } catch (error: unknown) {
-        Alert.alert('Login Error', getAuthErrorMessage(error));
+        notify('Login Error', getAuthErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -66,18 +89,26 @@ export default function LoginScreen({navigation}: any) {
 
   const inputStyle = {
     borderWidth: 1,
-    borderColor: '#333',
-    backgroundColor: '#ffffff',
-    color: '#000000',
+    borderColor: '#334155',
+    backgroundColor: '#0f172a',
+    color: '#f8fafc',
     padding: 10,
     marginBottom: 12,
     borderRadius: 6,
     fontSize: 16,
   };
 
+  if (booting) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#090d16', alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator size="large" color="#38bdf8" />
+      </View>
+    );
+  }
+
   return (
-    <View style={{ flex: 1, backgroundColor: '#f8f9fa', padding: 24, justifyContent: 'center' }}>
-      <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#111', marginBottom: 24, textAlign: 'center' }}>
+    <View style={{ flex: 1, backgroundColor: '#090d16', padding: 24, justifyContent: 'center' }}>
+      <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#f8fafc', marginBottom: 24, textAlign: 'center' }}>
         {isRegister ? 'Create Account' : 'Mosaic Login'}
       </Text>
       <TextInput

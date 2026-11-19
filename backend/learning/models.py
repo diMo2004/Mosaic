@@ -24,6 +24,13 @@ class Flashcard(models.Model):
         (CARD_TYPE_QUICK_QUIZ, 'Quick Quiz'),
     ]
 
+    ENVIRONMENT_PUBLIC = 'public'
+    ENVIRONMENT_PERSONAL = 'personal'
+    ENVIRONMENT_CHOICES = [
+        (ENVIRONMENT_PUBLIC, 'Public'),
+        (ENVIRONMENT_PERSONAL, 'Personal'),
+    ]
+
     title = models.CharField(max_length=255)
     prompt = models.TextField()
     answer = models.TextField()
@@ -83,18 +90,39 @@ class Flashcard(models.Model):
         choices=GENERATION_CHOICES,
         default=GENERATION_UNKNOWN,
     )
+    environment = models.CharField(
+        max_length=20,
+        choices=ENVIRONMENT_CHOICES,
+        default=ENVIRONMENT_PUBLIC,
+        db_index=True,
+    )
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='personal_flashcards',
+        help_text='Owner for personal-environment flashcards; null for public cards.',
+    )
 
     class Meta:
         ordering = ['-created_at']
         constraints = [
             models.UniqueConstraint(
                 fields=['source_claim'],
-                condition=models.Q(is_active=True, source_claim__isnull=False),
-                name='unique_active_flashcard_per_canonical_claim',
+                condition=models.Q(is_active=True, source_claim__isnull=False, environment='public'),
+                name='unique_active_public_flashcard_per_canonical_claim',
+            ),
+            models.UniqueConstraint(
+                fields=['source_claim', 'owner'],
+                condition=models.Q(is_active=True, source_claim__isnull=False, environment='personal'),
+                name='unique_active_personal_flashcard_per_user_claim',
             ),
         ]
         indexes = [
             models.Index(fields=['is_active', '-created_at'], name='flashcard_active_recent_idx'),
+            models.Index(fields=['environment', 'is_active', '-created_at'], name='flashcard_env_active_idx'),
+            models.Index(fields=['owner', 'environment', 'is_active'], name='flashcard_owner_env_idx'),
         ]
 
     def __str__(self):

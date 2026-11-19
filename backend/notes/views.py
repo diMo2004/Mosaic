@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404
 from django.db import transaction
 
 # Create your views here.
@@ -9,6 +9,8 @@ from verification.tasks import process_note_task
 from .serializers import NoteDetailSerializer, NoteUploadSerializer
 from users.permissions import IsProfileComplete
 from verification.services.note_processing import NoteProcessingService
+from knowledge.models import ExtractedClaim
+from knowledge.serializers import ExtractedClaimSerializer
 import logging
 
 logger = logging.getLogger(__name__)
@@ -56,3 +58,18 @@ class NoteDetailView(generics.RetrieveAPIView):
 
     def get_queryset(self):
         return Note.objects.filter(owner=self.request.user)
+
+
+class NoteClaimsView(generics.ListAPIView):
+    """List claims extracted from one of the signed-in user's notes."""
+    serializer_class = ExtractedClaimSerializer
+    permission_classes = [permissions.IsAuthenticated, IsProfileComplete]
+
+    def get_queryset(self):
+        note = get_object_or_404(
+            Note.objects.filter(owner=self.request.user),
+            pk=self.kwargs['pk'],
+        )
+        return ExtractedClaim.objects.filter(
+            source_document__uploaded_note=note,
+        ).select_related('source_document', 'reviewed_by')
