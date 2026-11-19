@@ -55,8 +55,8 @@ class NotePermissionTests(APITestCase):
         self.client.force_authenticate(user=self.user)
         file = SimpleUploadedFile('note.txt', b'BFS uses a queue', content_type='text/plain')
 
-        with patch('notes.views.process_note_task.delay', side_effect=ConnectionError('broker unavailable')):
-            with patch('notes.views.NoteProcessingService.process') as process_inline:
+        with patch('notes.views.process_note_task.apply_async', side_effect=ConnectionError('broker unavailable')):
+            with patch('notes.views.process_note_in_thread') as process_inline:
                 with self.captureOnCommitCallbacks(execute=True):
                     response = self.client.post(
                         '/api/notes/upload/',

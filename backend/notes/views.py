@@ -11,22 +11,48 @@ from users.permissions import IsProfileComplete
 from verification.services.note_processing import NoteProcessingService
 from knowledge.models import ExtractedClaim
 from knowledge.serializers import ExtractedClaimSerializer
+from django import db
+from django.conf import settings
 import logging
+import threading
 
 logger = logging.getLogger(__name__)
 
 
-def enqueue_note_processing(note_id):
+def _process_note_in_background(note_id):
     try:
-        process_note_task.delay(note_id)
+        NoteProcessingService().process(note_id)
+    except Exception:
+        logger.exception("Background processing failed for note %s", note_id)
+    finally:
+        db.connections.close_all()
+
+
+def process_note_in_thread(note_id):
+    # Processing calls Gemini and can take minutes, far past gunicorn's request
+    # timeout, so it must never run on the request thread.
+    threading.Thread(
+        target=_process_note_in_background,
+        args=(note_id,),
+        name=f"note-processing-{note_id}",
+        daemon=True,
+    ).start()
+
+
+def enqueue_note_processing(note_id):
+    if settings.CELERY_TASK_ALWAYS_EAGER:
+        process_note_in_thread(note_id)
+        return
+    try:
+        process_note_task.apply_async(args=[note_id], retry=False)
     except Exception:
         # Production may not have a Celery broker/worker configured yet. Do not
-        # turn a successfully stored upload into HTTP 500; process it inline.
+        # turn a successfully stored upload into HTTP 500 or a request timeout.
         logger.exception(
-            "Could not enqueue note %s; processing it synchronously instead",
+            "Could not enqueue note %s; processing it in a background thread instead",
             note_id,
         )
-        NoteProcessingService().process(note_id)
+        process_note_in_thread(note_id)
 
 class NoteUploadView(generics.CreateAPIView):
     serializer_class = NoteUploadSerializer
